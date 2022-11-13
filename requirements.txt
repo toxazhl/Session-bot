@@ -1,0 +1,13 @@
+# uvloop
+aiodns
+aiohttp[speedups]
+aiogram==3.0.0b5
+alembic
+asyncpg
+pydantic
+pyparsing
+python-dotenv
+redis
+SQLAlchemy
+pyyaml
+ujson
