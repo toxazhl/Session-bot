@@ -33,3 +33,13 @@ loggers:
     
   aiohttp.access:
     level: WARNING
+  
+  telethon:
+    level: WARNING
+  
+  pyrogram:
+    level: WARNING
+  
+  aiosqlite:
+    level: WARNING
+

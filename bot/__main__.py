@@ -67,7 +67,7 @@ async def main():
             app = web.Application()
 
             me = await bot.get_me()
-            url = f"{config.web.domain}{config.path.bot}"
+            url = f"{config.web.domain}{config.web.path.bot}"
             logger.info(
                 f"Run webhook for bot https://t.me/{me.username} "
                 f'id={bot.id} - "{me.full_name}" on {url}'
@@ -79,7 +79,7 @@ async def main():
                 allowed_updates=dp.resolve_used_update_types(),
             )
             SimpleRequestHandler(dispatcher=dp, bot=bot).register(
-                app, path=config.path.bot
+                app, path=config.web.path.bot
             )
 
             # Creating aiohttp server
@@ -96,13 +96,8 @@ async def main():
         await bot.session.close()
 
 
-async def test():
-    from bot.core.sessions.testp import testp
-
-    testp()
-
 if __name__ == "__main__":
     try:
-        asyncio.run(test())
+        asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
         logger.error("Bot stopped!")

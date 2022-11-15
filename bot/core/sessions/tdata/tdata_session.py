@@ -1,24 +1,26 @@
-from pathlib import Path
-from typing import Type
+from typing import TYPE_CHECKING
 
-from opentele.api import API, APIData
+from opentele.api import API
 from opentele.td import TDesktop, Account, AuthKeyType, AuthKey
 from opentele.td.configs import DcId, BuiltInDc
 
-from .base import BaseSession
+from bot.core.sessions.filemanager import FileManager
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from opentele.api import APIData
+    from typing import Type
 
 
-class TDataSession(BaseSession):
+class TDataSession:
     def __init__(
         self,
-        name: None | str = None,
         *,
-        api: Type[APIData] = API.TelegramDesktop,
+        dc_id: int,
         auth_key: bytes,
         user_id: int,
-        dc_id: int,
+        api: "Type[APIData]" = API.TelegramDesktop,
     ):
-        super().__init__(name)
         self.api = api
         self.auth_key = auth_key
         self.user_id = user_id
@@ -27,8 +29,7 @@ class TDataSession(BaseSession):
         self.dc_id, self.server_address, self.port = dc.id, dc.ip, dc.port
 
     @classmethod
-    async def from_tdata(cls, tdata_folder: str | Path):
-        tdata_folder = Path(tdata_folder)
+    def from_tdata(cls, tdata_folder: "Path"):
         if not tdata_folder.exists():
             raise FileNotFoundError(tdata_folder)
 
@@ -41,9 +42,8 @@ class TDataSession(BaseSession):
             dc_id=account.MainDcId
         )
 
-    async def to_tdata(self) -> Path:
-        tdata_folder = self.SESSION_PATH / self.name
-        tdata_folder.mkdir(parents=True, exist_ok=True)
+    def to_tdata(self, path: "Path"):
+        path.mkdir(parents=True, exist_ok=True)
 
         dc_id = DcId(self.dc_id)
         authKey = AuthKey(self.auth_key, AuthKeyType.ReadFromFile, dc_id)
@@ -57,6 +57,9 @@ class TDataSession(BaseSession):
         account._setMtpAuthorizationCustom(dc_id, self.user_id, [authKey])
         client._addSingleAccount(account)
 
-        client.SaveTData(tdata_folder / "tdata")
+        client.SaveTData(path / "tdata")
 
-        return tdata_folder
+    def to_tdata_zip(self, path: "Path"):
+        with FileManager() as fm:
+            self.to_tdata(fm.path)
+            fm.zip(path)

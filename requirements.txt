@@ -11,3 +11,7 @@ redis
 SQLAlchemy
 pyyaml
 ujson
+opentele
+pyrogram
+telethon
+aiosqlite

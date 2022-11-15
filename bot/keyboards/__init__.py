@@ -1,3 +1,3 @@
-from . import main_menu, reg
+from . import main_menu, sessions
 
-__all__ = ["main_menu", "reg"]
+__all__ = ["main_menu", "sessions"]

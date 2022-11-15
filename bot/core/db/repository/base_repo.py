@@ -6,10 +6,10 @@ from sqlalchemy.util import EMPTY_DICT
 
 class BaseRepo:
     def __init__(self, session: AsyncSession) -> None:
-        self.session = session
+        self._session = session
 
     def session_add(self, *instances) -> None:
-        self.session.add_all(instances)
+        self._session.add_all(instances)
 
     async def execute(
         self,
@@ -19,7 +19,7 @@ class BaseRepo:
         bind_arguments=None,
         **kw
     ) -> Result:
-        return await self.session.execute(
+        return await self._session.execute(
             statement, params, execution_options, bind_arguments, **kw
         )
 
@@ -78,4 +78,4 @@ class BaseRepo:
         if instances:
             self.session_add(*instances)
 
-        await self.session.commit()
+        await self._session.commit()

@@ -1,5 +1,7 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
-class RegStates(StatesGroup):
-    phone_number = State()
+class UploadStates(StatesGroup):
+    upload_pyrogram = State()
+    upload_telethon = State()
+    upload_tdata = State()
