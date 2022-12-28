@@ -22,8 +22,9 @@ async def to_pyro_sql_handler(
     try:
         session_id = callback_data.session_id
         manager = await SessionManager.from_database(session_id, repo)
+        print(manager.user_id)
 
-        with FileManager(ext=".session") as fm:
+        with FileManager(suffix=".session") as fm:
             await manager.to_pyrogram_file(fm.path)
             await query.message.answer_document(
                 FSInputFile(fm.path, filename=f"pyrogram-{fm.name}")
@@ -62,7 +63,7 @@ async def to_tele_sql_handler(
         session_id = callback_data.session_id
         manager = await SessionManager.from_database(session_id, repo)
 
-        with FileManager(ext=".session") as fm:
+        with FileManager(suffix=".session") as fm:
             await manager.to_telethon_file(fm.path)
             await query.message.answer_document(
                 FSInputFile(fm.path, filename=f"telethon-{fm.name}")
@@ -101,7 +102,7 @@ async def to_tdata_zip_handler(
         session_id = callback_data.session_id
         manager = await SessionManager.from_database(session_id, repo)
 
-        with FileManager(ext=".zip") as fm:
+        with FileManager(suffix=".zip") as fm:
             await manager.to_tdata_zip(fm.path)
             await query.message.answer_document(
                 FSInputFile(fm.path, filename=f"tdata-{fm.name}")

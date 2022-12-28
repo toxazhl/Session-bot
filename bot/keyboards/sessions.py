@@ -12,8 +12,8 @@ def upload():
     builder.button(text="🔄️ Pyrogram", callback_data="upload_pyrogram")
     builder.button(text="🔄️ Telethon", callback_data="upload_telethon")
     builder.button(text="🔄️ TData ZIP", callback_data="upload_tdata")
-    builder.button(text="🔜 tgnet.dat", callback_data="upload_tgnet.dat")
     builder.button(text="✍️ Manual", callback_data="upload_manual")
+    builder.button(text="🆕 Создать", callback_data="upload_create")
 
     builder.adjust(2)
 
@@ -37,14 +37,6 @@ def action(session_id: UUID):
     return builder.as_markup()
 
 
-def back_to_upload():
-    builder = InlineKeyboardBuilder()
-
-    builder.button(text="⬅️ Back", callback_data="upload_session")
-
-    return builder.as_markup()
-
-
 def back_to_session(session_id: UUID):
     builder = InlineKeyboardBuilder()
 
@@ -52,5 +44,13 @@ def back_to_session(session_id: UUID):
         text="⬅️ Back",
         callback_data=SessionCb(session_id=session_id, action="back")
     )
+
+    return builder.as_markup()
+
+
+def skip():
+    builder = InlineKeyboardBuilder()
+
+    builder.button(text="⏭️ Пропустить", callback_data="skip")
 
     return builder.as_markup()

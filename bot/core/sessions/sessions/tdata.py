@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from opentele.api import API
 from opentele.td import TDesktop, Account, AuthKeyType, AuthKey
-from opentele.td.configs import DcId, BuiltInDc
+from opentele.td.configs import DcId
 
 from bot.core.sessions.filemanager import FileManager
 
@@ -21,12 +21,10 @@ class TDataSession:
         user_id: int,
         api: "Type[APIData]" = API.TelegramDesktop,
     ):
-        self.api = api
+        self.dc_id = dc_id
         self.auth_key = auth_key
         self.user_id = user_id
-        self.dc_id = dc_id
-        dc = [dc for dc in BuiltInDc.kBuiltInDcs if dc.id == DcId(dc_id)][0]
-        self.dc_id, self.server_address, self.port = dc.id, dc.ip, dc.port
+        self.api = api
 
     @classmethod
     def from_tdata(cls, tdata_folder: "Path"):
@@ -42,7 +40,7 @@ class TDataSession:
             dc_id=account.MainDcId
         )
 
-    def to_tdata(self, path: "Path"):
+    def to_folder(self, path: "Path"):
         path.mkdir(parents=True, exist_ok=True)
 
         dc_id = DcId(self.dc_id)
@@ -59,7 +57,7 @@ class TDataSession:
 
         client.SaveTData(path / "tdata")
 
-    def to_tdata_zip(self, path: "Path"):
+    def to_zip(self, path: "Path"):
         with FileManager() as fm:
-            self.to_tdata(fm.path)
+            self.to_folder(fm.path)
             fm.zip(path)

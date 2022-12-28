@@ -39,16 +39,12 @@ async def validate_handler(
     session_id = callback_data.session_id
     manager = await SessionManager.from_database(session_id, repo)
 
-    start_time = time.time()
-    v = await manager.validate()
-    print(f"Validated in {time.time() - start_time:.2f}s")
-
-    if v:
+    if await manager.validate():
         await query.answer("✅ Сессия валидна", show_alert=True)
     else:
         await query.answer("❌ Сессия не валидна", show_alert=True)
 
-    await repo.session.update(session_id, manager.valid)
+    await repo.session.update(session_id, manager)
 
     return query.message.edit_text(
         text_session(manager),
@@ -72,7 +68,6 @@ def text_session(manager: SessionManager) -> str:
     t = "📂 Session\n\n"
 
     auth_key = f"{manager.auth_key_hex[:8]}...{manager.auth_key_hex[-8:]}"
-    server = f"{manager.server_address}:{manager.port}"
     user = manager.user
     link = "tg://user?id="
     valid = "?" if manager.valid is None else ("❌", "✅")[manager.valid]
@@ -80,12 +75,9 @@ def text_session(manager: SessionManager) -> str:
     t += (
         f"🆔 DC ID: {hcode(manager.dc_id)}\n"
         f"🔑 Auth Key: {hcode(auth_key)}\n"
-        f"🌐 Server: {hcode(server)}\n"
         f"🆗  Valid: {hcode(valid)}\n"
     )
 
-    if manager.api_id:
-        t += f"🔒 API ID: {hcode(manager.api_id)}\n"
     if user:
         status = ""
         if status := user.status:
@@ -98,9 +90,9 @@ def text_session(manager: SessionManager) -> str:
 
         t += "👤 User: \n"
         t += f'├─👤 Name: {hlink(user.first_name, f"{link}{user.id}")}\n'
-        t += f"├─🏷️ Username: @{user.username}\n" if user.username else ""
-        t += f"├─☎️ Phone: <code>{user.phone}</code>\n" if user.phone else ""
-        t += f"├─👁️ Status: {status}\n" if status else ""
+        t += f"├─💻 Username: @{user.username}\n" if user.username else ""
+        t += f"├─📞 Phone: <code>{user.phone}</code>\n" if user.phone else ""
+        t += f"├─📶 Status: {status}\n" if status else ""
         t += f"└─🆔 ID: <code>{user.id}</code>\n"
 
     elif manager.user_id:

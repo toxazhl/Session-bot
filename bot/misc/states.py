@@ -2,6 +2,9 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class UploadStates(StatesGroup):
-    upload_pyrogram = State()
-    upload_telethon = State()
-    upload_tdata = State()
+    pyrogram = State()
+    telethon = State()
+    tdata = State()
+    manual_auth_key = State()
+    manual_dc_id = State()
+    manual_user_id = State()
