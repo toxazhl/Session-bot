@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, or_
 
 from bot.core.db.models import Session
 from .base_repo import BaseRepo
@@ -16,25 +16,17 @@ class SessionRepo(BaseRepo):
         user_id: int,
         dc_id: int,
         auth_key: bytes,
-        server_address: str,
-        port: int,
         telegram_id: None | int = None,
-        api_id: None | int = None,
-        test_mode: None | bool = None,
-        is_bot: None | bool = None,
         valid: None | bool = None,
+        filename: None | str = None
     ) -> Session:
         session = Session(
             user_id=user_id,
             auth_key=auth_key,
-            api_id=api_id,
             dc_id=dc_id,
-            server_address=server_address,
-            port=port,
             telegram_id=telegram_id,
-            test_mode=test_mode,
-            is_bot=is_bot,
-            valid=valid
+            valid=valid,
+            filename=filename
         )
         await self.commit(session)
         return session
@@ -46,22 +38,23 @@ class SessionRepo(BaseRepo):
             user_id=user_id,
             dc_id=manager.dc_id,
             auth_key=manager.auth_key,
-            api_id=manager.api_id,
-            server_address=manager.server_address,
-            port=manager.port,
             telegram_id=manager.user_id,
-            is_bot=manager.is_bot,
-            test_mode=manager.test_mode,
             valid=manager.valid,
+            filename=manager.filename
         )
 
-    async def update(
-        self, session_id: "UUID", valid: None | bool = None
-    ) -> None:
+    async def update(self, session_id: "UUID", manager: "SessionManager") -> None:
         stmt = (
-            update(Session).
-            where(Session.id == session_id).
-            values(valid=valid)
+            update(Session)
+            .where(Session.id == session_id)
+            .values(
+                valid=manager.valid,
+                telegram_id=manager.user_id,
+                first_name=manager.first_name,
+                last_name=manager.last_name,
+                username=manager.username,
+                phone=manager.phone,
+            )
         )
         await self.execute(stmt)
         await self.commit()
@@ -69,3 +62,28 @@ class SessionRepo(BaseRepo):
     async def get(self, id: "UUID") -> Session:
         stmt = select(Session).where(Session.id == id)
         return await self.scalar(stmt)
+
+    async def get_all(
+        self, user_id: int, offset: int = 0, limit: int = 50, query: None | str = None
+    ) -> list[Session]:
+        search_columns = (
+            Session.first_name,
+            Session.last_name,
+            Session.username,
+            Session.phone,
+        )
+        conds = []
+        if query:
+            conds += [column.contains(query) for column in search_columns]
+            if query.isdigit():
+                conds.append(Session.telegram_id == int(query))
+
+        stmt = (
+            select(Session)
+            .where(Session.user_id == user_id).where(or_(*conds))
+            .offset(offset)
+            .limit(limit)
+            .order_by(Session.creation_date.desc())
+        )
+
+        return await self.scalars_all(stmt)

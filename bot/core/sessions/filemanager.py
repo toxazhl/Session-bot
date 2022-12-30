@@ -9,19 +9,14 @@ class FileManager:
     def __init__(
         self,
         base_path: None | str | Path = None,
-        ext: str = "",
+        suffix: str = "",
     ):
-        if base_path:
-            self.base_path = Path(base_path)
-        else:
-            self.base_path = self.BASE_PATH
+        base_path = Path(base_path) if base_path else self.BASE_PATH
+        base_path.mkdir(parents=True, exist_ok=True)
+        self.path = base_path / self.token_hex()
 
-        self.base_path.mkdir(parents=True, exist_ok=True)
-
-        self.extension = ext
-        self.path = self.BASE_PATH / self.token_hex()
-        if self.extension:
-            self.path = self.path.with_suffix(self.extension)
+        if suffix:
+            self.path = self.path.with_suffix(suffix)
 
         self.name = self.path.name
 

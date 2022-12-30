@@ -1,12 +1,22 @@
-from aiogram.utils.keyboard import ReplyKeyboardBuilder
+from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 
 def menu():
     builder = ReplyKeyboardBuilder()
 
-    builder.button(text="📤 Загрузить сессию")
-    builder.button(text="👤 Профиль")
+    builder.button(text="🆕 Войти")
+    builder.button(text="⬆️ Загрузить")
+    builder.button(text="📝 История")
 
-    builder.adjust(1)
+    builder.adjust(2, 1)
 
     return builder.as_markup(resize_keyboard=True)
+
+
+def close():
+    builder = InlineKeyboardBuilder()
+
+    builder.button(text="❌ Закрыть", callback_data="close")
+
+    return builder.as_markup(resize_keyboard=True)
+    

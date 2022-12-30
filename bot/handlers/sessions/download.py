@@ -19,78 +19,58 @@ router = Router()
 async def to_pyro_sql_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
-    try:
-        session_id = callback_data.session_id
-        manager = await SessionManager.from_database(session_id, repo)
+    manager = await SessionManager.from_database(callback_data.session_id, repo)
+    manager.filename
+    with FileManager(suffix=".session") as fm:
+        await manager.to_pyrogram_file(fm.path)
+        await query.message.answer_document(
+            FSInputFile(fm.path, filename=f"pyrogram-{manager.name}{fm.path.suffix}")
+        )
 
-        with FileManager(ext=".session") as fm:
-            await manager.to_pyrogram_file(fm.path)
-            await query.message.answer_document(
-                FSInputFile(fm.path, filename=f"pyrogram-{fm.name}")
-            )
-
-        return await query.answer()
-    except Exception as e:
-        logger.exception(e)
-        return query.answer(f"Не удалось скоnвертировать сессию. {e}")
+    await query.answer()
 
 
 @router.callback_query(SessionCb.filter(F.action == "pyro_str"))
 async def to_pyro_str_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
-    try:
-        session_id = callback_data.session_id
-        manager = await SessionManager.from_database(session_id, repo)
+    manager = await SessionManager.from_database(callback_data.session_id, repo)
 
-        string_session = manager.to_pyrogram_string()
-        await query.message.edit_text(
-            hcode(string_session),
-            reply_markup=kb.sessions.back_to_session(session_id),
-        )
-        return await query.answer()
-    except Exception as e:
-        logger.exception(e)
-        return query.answer(f"Не удалось скоnвертировать сессию. {e}")
+    string_session = manager.to_pyrogram_string()
+    await query.message.edit_text(
+        hcode(string_session),
+        reply_markup=kb.sessions.back_to_session(callback_data.session_id),
+    )
+    await query.answer()
 
 
 @router.callback_query(SessionCb.filter(F.action == "tele_sql"))
 async def to_tele_sql_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
-    try:
-        session_id = callback_data.session_id
-        manager = await SessionManager.from_database(session_id, repo)
+    manager = await SessionManager.from_database(callback_data.session_id, repo)
+    with FileManager(suffix=".session") as fm:
+        await manager.to_telethon_file(fm.path)
+        await query.message.answer_document(
+            FSInputFile(fm.path, filename=f"telethon-{manager.name}{fm.path.suffix}")
+        )
 
-        with FileManager(ext=".session") as fm:
-            await manager.to_telethon_file(fm.path)
-            await query.message.answer_document(
-                FSInputFile(fm.path, filename=f"telethon-{fm.name}")
-            )
-
-        return await query.answer()
-    except Exception as e:
-        logger.exception(e)
-        return query.answer(f"Не удалось скоnвертировать сессию. {e}")
+    await query.answer()
 
 
 @router.callback_query(SessionCb.filter(F.action == "tele_str"))
 async def to_tele_str_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
-    try:
-        session_id = callback_data.session_id
-        manager = await SessionManager.from_database(session_id, repo)
+    session_id = callback_data.session_id
+    manager = await SessionManager.from_database(session_id, repo)
 
-        string_session = manager.to_telethon_string()
-        await query.message.edit_text(
-            hcode(string_session),
-            reply_markup=kb.sessions.back_to_session(session_id),
-        )
-        return await query.answer()
-    except Exception as e:
-        logger.exception(e)
-        return query.answer(f"Не удалось скоnвертировать сессию. {e}")
+    string_session = manager.to_telethon_string()
+    await query.message.edit_text(
+        hcode(string_session),
+        reply_markup=kb.sessions.back_to_session(session_id),
+    )
+    await query.answer()
 
 
 @router.callback_query(SessionCb.filter(F.action == "tdata_zip"))
@@ -100,17 +80,16 @@ async def to_tdata_zip_handler(
     try:
         session_id = callback_data.session_id
         manager = await SessionManager.from_database(session_id, repo)
-
-        with FileManager(ext=".zip") as fm:
+        with FileManager(suffix=".zip") as fm:
             await manager.to_tdata_zip(fm.path)
             await query.message.answer_document(
-                FSInputFile(fm.path, filename=f"tdata-{fm.name}")
+                FSInputFile(fm.path, filename=f"tdata-{manager.name}{fm.path.suffix}")
             )
 
-        return await query.answer()
-    except TypeError:
-        return query.answer("Для конвертации в tdata сессия должна быть валидной")
+        await query.answer()
 
-    except Exception as e:
-        logger.exception(e)
-        return query.answer(f"Не удалось скоnвертировать сессию. {e}")
+    except TypeError:
+        await query.answer(
+            "❌ Для конвертации в tdata сессия должна быть валидной или должен присутствовать user_id",
+            show_alert=True
+        )

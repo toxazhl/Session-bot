@@ -1,7 +1,7 @@
 # uvloop
 aiodns
 aiohttp[speedups]
-aiogram==3.0.0b5
+aiogram==3.0.0b6
 alembic
 asyncpg
 pydantic

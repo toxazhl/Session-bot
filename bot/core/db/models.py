@@ -1,7 +1,17 @@
 import uuid
 
 from aiogram.utils.markdown import hlink
-from sqlalchemy import func, Column, BigInteger, DateTime, String, LargeBinary, Integer, Boolean, ForeignKey
+from sqlalchemy import (
+    func,
+    Column,
+    BigInteger,
+    DateTime,
+    String,
+    LargeBinary,
+    Integer,
+    Boolean,
+    ForeignKey,
+)
 from sqlalchemy.dialects.postgresql import UUID
 
 from bot.core.db.base import Base
@@ -28,11 +38,32 @@ class Session(Base):
     user_id = Column(BigInteger, ForeignKey("user.id"))
     dc_id = Column(Integer)
     auth_key = Column(LargeBinary)
-    api_id = Column(Integer)
-    server_address = Column(String(255))
-    port = Column(Integer)
     telegram_id = Column(BigInteger)
-    test_mode = Column(Boolean)
-    is_bot = Column(Boolean)
     valid = Column(Boolean)
+    first_name = Column(String(64))
+    last_name = Column(String(64))
+    username = Column(String(32))
+    phone = Column(String(16))
+    filename = Column(String(256))
     creation_date = Column(DateTime(timezone=True), default=func.now())
+
+
+class Proxy(Base):
+    __tablename__ = "proxy"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    scheme = Column(String(16))
+    host = Column(String(16))
+    port = Column(Integer)
+    login = Column(String(32))
+    password = Column(String(32))
+    uses = Column(Integer, server_default="0")
+
+    def pyro_format(self) -> dict[str, int | str]:
+        return dict(
+            scheme=self.scheme,
+            hostname=self.host,
+            port=self.port,
+            username=self.login,
+            password=self.password,
+        )
