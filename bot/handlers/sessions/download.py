@@ -19,7 +19,6 @@ router = Router()
 async def to_pyro_sql_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
-<<<<<<< HEAD
     manager = await SessionManager.from_database(callback_data.session_id, repo)
     manager.filename
     with FileManager(suffix=".session") as fm:
@@ -29,23 +28,6 @@ async def to_pyro_sql_handler(
         )
 
     await query.answer()
-=======
-    try:
-        session_id = callback_data.session_id
-        manager = await SessionManager.from_database(session_id, repo)
-        print(manager.user_id)
-
-        with FileManager(suffix=".session") as fm:
-            await manager.to_pyrogram_file(fm.path)
-            await query.message.answer_document(
-                FSInputFile(fm.path, filename=f"pyrogram-{fm.name}")
-            )
-
-        return await query.answer()
-    except Exception as e:
-        logger.exception(e)
-        return query.answer(f"Не удалось скоnвертировать сессию. {e}")
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
 
 @router.callback_query(SessionCb.filter(F.action == "pyro_str"))
@@ -73,20 +55,7 @@ async def to_tele_sql_handler(
             FSInputFile(fm.path, filename=f"telethon-{manager.name}{fm.path.suffix}")
         )
 
-<<<<<<< HEAD
     await query.answer()
-=======
-        with FileManager(suffix=".session") as fm:
-            await manager.to_telethon_file(fm.path)
-            await query.message.answer_document(
-                FSInputFile(fm.path, filename=f"telethon-{fm.name}")
-            )
-
-        return await query.answer()
-    except Exception as e:
-        logger.exception(e)
-        return query.answer(f"Не удалось скоnвертировать сессию. {e}")
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
 
 @router.callback_query(SessionCb.filter(F.action == "tele_str"))
@@ -111,10 +80,6 @@ async def to_tdata_zip_handler(
     try:
         session_id = callback_data.session_id
         manager = await SessionManager.from_database(session_id, repo)
-<<<<<<< HEAD
-=======
-
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
         with FileManager(suffix=".zip") as fm:
             await manager.to_tdata_zip(fm.path)
             await query.message.answer_document(

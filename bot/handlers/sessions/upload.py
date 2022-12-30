@@ -1,23 +1,13 @@
 import logging
 import zipfile
-<<<<<<< HEAD
-=======
-from sqlite3 import DatabaseError
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
 from aiogram import Bot, F, Router
-from aiogram.filters import ExceptionTypeFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
-from aiogram.types.error_event import ErrorEvent
 
 from bot import keyboards as kb
 from bot.core.db import Repo
 from bot.core.db.models import User
-<<<<<<< HEAD
-=======
-from bot.core.sessions.exceptions import ValidationError
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 from bot.core.sessions.filemanager import FileManager
 from bot.core.sessions.manager import SessionManager
 from bot.misc.states import UploadStates
@@ -29,34 +19,12 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-<<<<<<< HEAD
 @router.message(F.text == "⬆️ Загрузить")
 async def upload_session_handler(message: Message):
     await message.answer(
         "Выбери тип сессии, которую хочешь конвертировать\n"
         "Также ты можешь просто отправить файл, затем мы покажем доступные варианты",
         reply_markup=kb.sessions.upload(),
-=======
-@router.errors(ExceptionTypeFilter(DatabaseError, ValidationError))
-async def error_session_handler(error: ErrorEvent):
-    await error.update.message.answer("❌ Файл не является сессией Pyrogram")
-
-
-@router.errors()
-async def error_handler(error: ErrorEvent):
-    if error.update.callback_query:
-        await error.update.callback_query.answer("❌ Произошла ошибка")
-    elif error.update.message:
-        await error.update.message.answer("❌ Произошла ошибка")
-    raise error.exception
-
-
-@router.message(F.text == "📤 Загрузить сессию")
-async def upload_session_handler(message: Message):
-    await message.answer(
-        "Выберите тип сессии, которую хотите конвертировать",
-        reply_markup=kb.sessions.upload()
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     )
 
 
@@ -64,29 +32,20 @@ async def upload_session_handler(message: Message):
 async def upload_pyrogram_handler(query: CallbackQuery, state: FSMContext):
     await query.answer()
     await state.set_state(UploadStates.pyrogram)
-<<<<<<< HEAD
     await query.message.edit_text("Отправь файл или строку сессии Pyrogram:")
-=======
-    await query.message.edit_text("Отправьте файл или строку сессии Pyrogram:")
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
 
 @router.callback_query(F.data == "upload_telethon")
 async def upload_telethon_handler(query: CallbackQuery, state: FSMContext):
     await query.answer()
     await state.set_state(UploadStates.telethon)
-<<<<<<< HEAD
     await query.message.edit_text("Отправь файл или строку сессии Telethon:")
-=======
-    await query.message.edit_text("Отправьте файл или строку сессии Telethon:")
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
 
 @router.callback_query(F.data == "upload_tdata")
 async def upload_tdata_handler(query: CallbackQuery, state: FSMContext):
     await query.answer()
     await state.set_state(UploadStates.tdata)
-<<<<<<< HEAD
     await query.message.edit_text("Отправь .zip архив сесии tdata:")
 
 
@@ -109,35 +68,6 @@ async def upload_file_too_big_handler(message: Message):
     )
 
 
-=======
-    await query.message.edit_text("Отправьте zip архив сесии tdata:")
-
-
-@router.callback_query(F.data == "upload_tgnet.dat")
-async def upload_tgnetdat_handler(query: CallbackQuery):
-    await query.answer(
-        "tgnet.dat - файл, в котором хранится сессия Telegram на телефоне. \n"
-        "Сейчас этот функционал еще не реализован. \n"
-        "Если вам нужно это, то сообщите мне",
-        show_alert=True
-    )
-
-
-@router.callback_query(F.data == "upload_manual")
-async def upload_manual_handler(query: CallbackQuery, state: FSMContext):
-    await query.answer()
-    await state.set_state(UploadStates.manual_auth_key)
-    msg = await query.message.edit_text("Отправьте auth_key в HEX формате:")
-    await state.update_data(message_id=msg.message_id)
-
-
-@router.message(F.document.file_size > 512000, UploadStates)
-async def upload_file_too_big_handler(message: Message):
-    await message.delete()
-    await message.answer("❌ Файл слишком большой (> 500 КБ)")
-
-
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 @router.message(F.document, UploadStates.pyrogram)
 async def pyro_sqlite_handler(
     message: Message, state: FSMContext, bot: Bot, repo: Repo, user: User
@@ -151,12 +81,7 @@ async def pyro_sqlite_handler(
     session = await repo.session.add_from_manager(user.id, manager)
 
     await message.answer(
-<<<<<<< HEAD
         text_session(manager), reply_markup=kb.sessions.action(session.id)
-=======
-        text_session(manager),
-        reply_markup=kb.sessions.action(session.id)
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     )
 
 
@@ -169,12 +94,7 @@ async def pyro_string_handler(
 
     await state.clear()
     await message.answer(
-<<<<<<< HEAD
         text_session(manager), reply_markup=kb.sessions.action(session.id)
-=======
-        text_session(manager),
-        reply_markup=kb.sessions.action(session.id)
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     )
 
 
@@ -190,12 +110,7 @@ async def tele_sqlite_handler(
 
     await state.clear()
     await message.answer(
-<<<<<<< HEAD
         text_session(manager), reply_markup=kb.sessions.action(session.id)
-=======
-        text_session(manager),
-        reply_markup=kb.sessions.action(session.id)
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     )
 
 
@@ -208,12 +123,7 @@ async def tele_string_handler(
 
     await state.clear()
     await message.answer(
-<<<<<<< HEAD
         text_session(manager), reply_markup=kb.sessions.action(session.id)
-=======
-        text_session(manager),
-        reply_markup=kb.sessions.action(session.id)
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     )
 
 
@@ -238,7 +148,6 @@ async def tdata_handler(
 
     await state.clear()
     await message.answer(
-<<<<<<< HEAD
         text_session(manager), reply_markup=kb.sessions.action(session.id)
     )
 
@@ -319,13 +228,6 @@ async def auto_tdata_handler(
     
 
 
-=======
-        text_session(manager),
-        reply_markup=kb.sessions.action(session.id)
-    )
-
-
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 @router.message(F.text, UploadStates.manual_auth_key)
 async def manual_auth_key_handler(message: Message, state: FSMContext):
     await state.update_data(auth_key=message.text)
@@ -363,23 +265,14 @@ async def manual_user_id_handler(
 
     await state.clear()
     await message.answer(
-<<<<<<< HEAD
         text_session(manager), reply_markup=kb.sessions.action(session.id)
-=======
-        text_session(manager),
-        reply_markup=kb.sessions.action(session.id)
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     )
 
 
 @router.callback_query(F.data == "skip", UploadStates.manual_user_id)
-<<<<<<< HEAD
 async def skip_user_id_handler(
     query: CallbackQuery, state: FSMContext, repo: Repo, user: User
 ):
-=======
-async def skip_user_id_handler(query: CallbackQuery, state: FSMContext, repo: Repo, user: User):
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     data = await state.get_data()
     manager = SessionManager(
         auth_key=bytes.fromhex(data["auth_key"]),
@@ -390,10 +283,5 @@ async def skip_user_id_handler(query: CallbackQuery, state: FSMContext, repo: Re
 
     await state.clear()
     await query.message.edit_text(
-<<<<<<< HEAD
         text_session(manager), reply_markup=kb.sessions.action(session.id)
-=======
-        text_session(manager),
-        reply_markup=kb.sessions.action(session.id)
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     )

@@ -7,11 +7,8 @@ from .sessions.pyro import PyroSession
 from .sessions.tele import TeleSession
 from .sessions.tdata import TDataSession
 from .exceptions import ValidationError
-<<<<<<< HEAD
 
 from bot.core.db.models import Proxy, Session
-=======
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -40,7 +37,6 @@ class SessionManager:
         self.auth_key = auth_key
         self.user_id = user_id
         self.valid = valid
-<<<<<<< HEAD
         self.api = api.Generate()
         self.proxy = proxy
         self.first_name = first_name
@@ -48,9 +44,6 @@ class SessionManager:
         self.username = username
         self.phone = phone
         self.filename = filename
-=======
-        self.api = api.copy()
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
         self.user = None
         self.client = None
 
@@ -67,7 +60,6 @@ class SessionManager:
     def auth_key_hex(self) -> str:
         return self.auth_key.hex()
 
-<<<<<<< HEAD
     @property
     def name(self) -> str:
         if self.filename:
@@ -117,64 +109,25 @@ class SessionManager:
         session = await TeleSession.from_file(file)
         return cls(
             dc_id=session.dc_id, auth_key=session.auth_key, api=api, filename=file.name
-=======
-    @classmethod
-    async def from_database(cls, session_id: "UUID", repo: "Repo"):
-        session = await repo.session.get(session_id)
-        return cls(
-            dc_id=session.dc_id,
-            auth_key=session.auth_key,
-            user_id=session.telegram_id,
-            valid=session.valid,
-        )
-
-    @classmethod
-    async def from_telethon_file(cls, file: "Path", api=API.TelegramDesktop):
-        session = await TeleSession.from_file(file)
-        return cls(
-            dc_id=session.dc_id,
-            auth_key=session.auth_key,
-            api=api
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
         )
 
     @classmethod
     def from_telethon_string(cls, string: str, api=API.TelegramDesktop):
         session = TeleSession.from_string(string)
-<<<<<<< HEAD
         return cls(dc_id=session.dc_id, auth_key=session.auth_key, api=api)
 
     @classmethod
     async def from_pyrogram_file(cls, file: "Path", filename: None | str = None, api=API.TelegramDesktop):
         session = await PyroSession.from_file(file)
-=======
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
         return cls(
+            auth_key=session.auth_key,
             dc_id=session.dc_id,
-<<<<<<< HEAD
             api=api,
             user_id=session.user_id,
             filename=filename,
         )
 
     @classmethod
-=======
-            auth_key=session.auth_key,
-            api=api
-        )
-
-    @classmethod
-    async def from_pyrogram_file(cls, file: "Path", api=API.TelegramDesktop):
-        session = await PyroSession.from_file(file)
-        return cls(
-            auth_key=session.auth_key,
-            dc_id=session.dc_id,
-            api=api,
-            user_id=session.user_id,
-        )
-
-    @classmethod
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     def from_pyrogram_string(cls, string: str, api=API.TelegramDesktop):
         session = PyroSession.from_string(string)
         return cls(
@@ -190,12 +143,8 @@ class SessionManager:
         return cls(
             auth_key=session.auth_key,
             dc_id=session.dc_id,
-<<<<<<< HEAD
             api=session.api,
             filename=folder.name,
-=======
-            api=session.api
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
         )
 
     async def to_pyrogram_file(self, path: "Path"):
@@ -243,12 +192,9 @@ class SessionManager:
         )
 
     def pyrogram_client(self, proxy=None, no_updates=True):
-<<<<<<< HEAD
         if self.proxy and not proxy:
             proxy = self.proxy.pyro_format()
 
-=======
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
         client = self.pyrogram.client(
             api=self.api,
             proxy=proxy,
@@ -259,11 +205,7 @@ class SessionManager:
     def telethon_client(self, proxy=None, no_updates=True):
         client = self.telethon.client(
             api=self.api,
-<<<<<<< HEAD
             proxy=proxy or self.proxy,
-=======
-            proxy=proxy,
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
             no_updates=no_updates,
         )
         return client

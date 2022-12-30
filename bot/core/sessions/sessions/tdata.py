@@ -3,10 +3,7 @@ from typing import TYPE_CHECKING
 from opentele.api import API
 from opentele.td import TDesktop, Account, AuthKeyType, AuthKey
 from opentele.td.configs import DcId
-<<<<<<< HEAD
 from opentele.exception import TFileNotFound
-=======
->>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
 from bot.core.sessions.filemanager import FileManager
 from bot.core.sessions.exceptions import TFileError
