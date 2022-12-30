@@ -4,8 +4,14 @@ import struct
 from typing import Type, TYPE_CHECKING
 
 import aiosqlite
+<<<<<<< HEAD
 from opentele.api import APIData
 from pyrogram.client import Client
+=======
+from opentele.api import API, APIData
+from pyrogram.client import Client
+from pyrogram.session.internals.data_center import DataCenter
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
 from bot.core.sessions.exceptions import ValidationError
 
@@ -144,6 +150,11 @@ class PyroSession:
                         columns = {row["name"] for row in await cur.fetchall()}
                         if "api_id" in columns:
                             columns.remove("api_id")
+<<<<<<< HEAD
+=======
+                        print(columns, session_columns)
+                        print(columns != session_columns)
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
                         if session_columns != columns:
                             return False
 

@@ -37,8 +37,12 @@ def upload():
     builder.button(text="🔄️ Telethon", callback_data="upload_telethon")
     builder.button(text="🔄️ TData ZIP", callback_data="upload_tdata")
     builder.button(text="✍️ Manual", callback_data="upload_manual")
+<<<<<<< HEAD
     builder.button(text="❌ Закрыть", callback_data="close")
     builder.adjust(2)
+=======
+    builder.button(text="🆕 Создать", callback_data="upload_create")
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
     return builder.as_markup()
 
@@ -66,8 +70,13 @@ def action(session_id: UUID):
     builder.button(text="🔄️ Tele session", callback_data=Cb(action="tele_sql"))
     builder.button(text="🔄️ Tele string", callback_data=Cb(action="tele_str"))
     builder.button(text="🔄️ TData ZIP", callback_data=Cb(action="tdata_zip"))
+<<<<<<< HEAD
     builder.button(text="❌ Закрыть", callback_data="close")
     builder.adjust(2, 2, 2, 1, 1)
+=======
+
+    builder.adjust(2)
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 
     return builder.as_markup()
 
@@ -85,5 +94,11 @@ def back_to_session(session_id: UUID):
 
 def skip():
     builder = InlineKeyboardBuilder()
+<<<<<<< HEAD
     builder.button(text="⏭️ Пропустить", callback_data="skip")
+=======
+
+    builder.button(text="⏭️ Пропустить", callback_data="skip")
+
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
     return builder.as_markup()

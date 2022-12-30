@@ -10,7 +10,11 @@ from sqlalchemy import (
     LargeBinary,
     Integer,
     Boolean,
+<<<<<<< HEAD
     ForeignKey,
+=======
+    ForeignKey
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
 )
 from sqlalchemy.dialects.postgresql import UUID
 

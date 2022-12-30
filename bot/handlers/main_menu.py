@@ -24,12 +24,17 @@ async def new_user_handler(message: Message, state: FSMContext, repo: Repo):
 async def start_handler(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
+<<<<<<< HEAD
         "Привет 👋\n"
         "🤖 Этот бот может конвертировать и создавать новые Telegram сессии\n\n"
         "🥇 Возможности:\n"
         "✅ Конвертирование сессий между Pyrogram, Telegram и TData\n"
         "✅ Создание новых сессий в любом формате\n"
         "✅ Быстрый вход в чужой Telegram для слежки",
+=======
+        "Ви в головному меню ⚡\n"
+        "Оберіть дію:",
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
         reply_markup=kb.main_menu.menu()
     )
 

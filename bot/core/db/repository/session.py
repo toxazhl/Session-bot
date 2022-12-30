@@ -25,8 +25,12 @@ class SessionRepo(BaseRepo):
             auth_key=auth_key,
             dc_id=dc_id,
             telegram_id=telegram_id,
+<<<<<<< HEAD
             valid=valid,
             filename=filename
+=======
+            valid=valid
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
         )
         await self.commit(session)
         return session
@@ -43,6 +47,7 @@ class SessionRepo(BaseRepo):
             filename=manager.filename
         )
 
+<<<<<<< HEAD
     async def update(self, session_id: "UUID", manager: "SessionManager") -> None:
         stmt = (
             update(Session)
@@ -55,6 +60,15 @@ class SessionRepo(BaseRepo):
                 username=manager.username,
                 phone=manager.phone,
             )
+=======
+    async def update(
+        self, session_id: "UUID", manager: "SessionManager"
+    ) -> None:
+        stmt = (
+            update(Session).
+            where(Session.id == session_id).
+            values(valid=manager.valid, telegram_id=manager.user_id)
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
         )
         await self.execute(stmt)
         await self.commit()

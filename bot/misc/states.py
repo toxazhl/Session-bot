@@ -8,6 +8,7 @@ class UploadStates(StatesGroup):
     manual_auth_key = State()
     manual_dc_id = State()
     manual_user_id = State()
+<<<<<<< HEAD
 
 
 class LoginStates(StatesGroup):
@@ -16,3 +17,5 @@ class LoginStates(StatesGroup):
     phone_code = State()
     password = State()
     
+=======
+>>>>>>> bcda1cf483b29e0bb6f36d959f3abeb56afdbed0
