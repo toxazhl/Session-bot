@@ -1,12 +1,14 @@
 from typing import TYPE_CHECKING
 from secrets import token_urlsafe
+import zipfile
 
 from opentele.api import API
+from pyrogram.errors.rpc_error import RPCError
 
 from .sessions.pyro import PyroSession
 from .sessions.tele import TeleSession
 from .sessions.tdata import TDataSession
-from .exceptions import ValidationError
+from .filemanager import FileManager
 
 from bot.core.db.models import Proxy, Session
 
@@ -75,12 +77,26 @@ class SessionManager:
         return token_urlsafe(4)
 
     @classmethod
-    async def autodetect(cls, file: "Path") -> None | str:
+    async def autoimport(cls, file: "Path", filename: None | str = None) -> None | str:
         if await PyroSession.validate(file):
-            return "Pyrogram"
+            return await cls.from_pyrogram_file(file, filename)
         if await TeleSession.validate(file):
-            return "Telethon"
-        return None
+            return await cls.from_telethon_file(file, filename)
+        # try:
+        with FileManager() as fm:
+            with zipfile.ZipFile(file) as f:
+                f.extractall(fm.path)
+
+            if fm.path.joinpath("tdata").exists():
+                tdata_path = fm.path.joinpath("tdata")
+            else:
+                tdata_path = fm.path
+
+            return SessionManager.from_tdata_folder(tdata_path)
+
+        # except Exception as e:
+        #     print(e.__class__.__name__, e)
+        #     return None
 
     @classmethod
     async def from_database(
@@ -105,10 +121,10 @@ class SessionManager:
         )
 
     @classmethod
-    async def from_telethon_file(cls, file: "Path", api=API.TelegramDesktop):
+    async def from_telethon_file(cls, file: "Path", filename: None | str = None, api=API.TelegramDesktop):
         session = await TeleSession.from_file(file)
         return cls(
-            dc_id=session.dc_id, auth_key=session.auth_key, api=api, filename=file.name
+            dc_id=session.dc_id, auth_key=session.auth_key, api=api, filename=filename
         )
 
     @classmethod
@@ -211,9 +227,14 @@ class SessionManager:
         return client
 
     async def validate(self) -> bool:
-        user = await self.get_user()
-        self.valid = bool(user)
-        if user:
+        try:
+            user = await self.get_user()
+    
+        except RPCError:
+            self.valid = False
+        
+        else:
+            self.valid = True
             self.first_name = user.first_name
             self.last_name = user.last_name
             self.username = user.username
@@ -228,7 +249,7 @@ class SessionManager:
         user = await self.get_user()
 
         if user is None:
-            raise ValidationError()
+            raise TypeError()
 
         return user.id
 

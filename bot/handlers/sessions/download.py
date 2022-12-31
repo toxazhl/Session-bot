@@ -62,13 +62,12 @@ async def to_tele_sql_handler(
 async def to_tele_str_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
-    session_id = callback_data.session_id
-    manager = await SessionManager.from_database(session_id, repo)
+    manager = await SessionManager.from_database(callback_data.session_id, repo)
 
     string_session = manager.to_telethon_string()
     await query.message.edit_text(
         hcode(string_session),
-        reply_markup=kb.sessions.back_to_session(session_id),
+        reply_markup=kb.sessions.back_to_session(callback_data.session_id),
     )
     await query.answer()
 
@@ -78,8 +77,7 @@ async def to_tdata_zip_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
     try:
-        session_id = callback_data.session_id
-        manager = await SessionManager.from_database(session_id, repo)
+        manager = await SessionManager.from_database(callback_data.session_id, repo)
         with FileManager(suffix=".zip") as fm:
             await manager.to_tdata_zip(fm.path)
             await query.message.answer_document(

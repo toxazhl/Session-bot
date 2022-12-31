@@ -33,10 +33,10 @@ def phone_confirm():
 def upload():
     builder = InlineKeyboardBuilder()
 
-    builder.button(text="🔄️ Pyrogram", callback_data="upload_pyrogram")
-    builder.button(text="🔄️ Telethon", callback_data="upload_telethon")
-    builder.button(text="🔄️ TData ZIP", callback_data="upload_tdata")
-    builder.button(text="✍️ Manual", callback_data="upload_manual")
+    # builder.button(text="🔄️ Pyrogram", callback_data="upload_pyrogram")
+    # builder.button(text="🔄️ Telethon", callback_data="upload_telethon")
+    # builder.button(text="🔄️ TData ZIP", callback_data="upload_tdata")
+    builder.button(text="✍️ Вручную", callback_data="upload_manual")
     builder.button(text="❌ Закрыть", callback_data="close")
     builder.adjust(2)
 
