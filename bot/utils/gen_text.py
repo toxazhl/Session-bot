@@ -1,7 +1,7 @@
 from aiogram.utils.markdown import hcode, hlink
-from telethon.tl.types import UserStatusOnline, UserStatusOffline, UserStatusRecently
+from telethon.tl.types import UserStatusOffline, UserStatusOnline, UserStatusRecently
 
-from bot.core.sessions.manager import SessionManager
+from bot.core.session.session import SessionManager
 
 
 def text_session(manager: SessionManager) -> str:

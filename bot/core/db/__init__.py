@@ -1,5 +1,4 @@
-from .base import Base
-from .repository.repo import Repo
-from . import models
+from .base.base import Base
+from .repo import Repo
 
-__all__ = ["Base", "Repo", "models"]
+__all__ = ["Base", "Repo"]

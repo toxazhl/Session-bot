@@ -3,7 +3,7 @@ import logging
 from aiogram import F, Router
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
 from bot import keyboards as kb
 from bot.core.db import Repo
@@ -30,7 +30,7 @@ async def start_handler(message: Message, state: FSMContext):
         "✅ Конвертирование сессий между Pyrogram, Telegram и TData\n"
         "✅ Создание новых сессий в любом формате\n"
         "✅ Быстрый вход в чужой Telegram для слежки",
-        reply_markup=kb.main_menu.menu()
+        reply_markup=kb.main_menu.menu(),
     )
 
 

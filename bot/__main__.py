@@ -1,21 +1,23 @@
 import asyncio
+import logging
 import logging.config
-import yaml
 import os
 
+import yaml
 from aiogram import Bot, Dispatcher, F
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 from aiohttp import web
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from bot.core.config.configreader import Config
+from bot.core.session.proxy import ProxyManager
 from bot.handlers import setup_routers
 from bot.middlewares.db import DbSessionMiddleware
 from bot.middlewares.user import UserMiddleware
-
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +50,15 @@ async def main():
     else:
         dp = Dispatcher(storage=MemoryStorage())
 
-    dp.message.filter(F.chat.type == "private")
+    pm = ProxyManager(db_pool)
 
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(pm.update, "interval", seconds=60)
+    scheduler.start()
+
+    dp["pm"] = pm
+
+    dp.message.filter(F.chat.type == "private")
     dp.update.outer_middleware(DbSessionMiddleware(db_pool))
     dp.update.outer_middleware(UserMiddleware())
 

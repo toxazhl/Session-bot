@@ -1,6 +1,7 @@
 from typing import Any
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy.engine import Result
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.util import EMPTY_DICT
 
 

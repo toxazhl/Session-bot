@@ -1,17 +1,14 @@
 import base64
 import secrets
 import struct
-from typing import Type, TYPE_CHECKING
+from pathlib import Path
+from typing import Type
 
 import aiosqlite
 from opentele.api import APIData
 from pyrogram.client import Client
 
-from bot.core.sessions.exceptions import ValidationError
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
+from bot.core.session.exceptions import ValidationError
 
 SCHEMA = """
 CREATE TABLE sessions (
@@ -60,8 +57,15 @@ class PyroSession:
     STRING_FORMAT = ">BI?256sQ?"
     TABLES = {
         "sessions": {"dc_id", "test_mode", "auth_key", "date", "user_id", "is_bot"},
-        "peers": {"id", "access_hash", "type", "username", "phone_number", "last_update_on"},
-        "version": {"number"}
+        "peers": {
+            "id",
+            "access_hash",
+            "type",
+            "username",
+            "phone_number",
+            "last_update_on",
+        },
+        "version": {"number"},
     }
 
     def __init__(
@@ -73,7 +77,7 @@ class PyroSession:
         is_bot: bool = False,
         test_mode: bool = False,
         api_id: None | int = None,
-        **kw
+        **kw,
     ):
         self.dc_id = dc_id
         self.auth_key = auth_key
@@ -95,14 +99,14 @@ class PyroSession:
                 string_format,
                 base64.urlsafe_b64decode(
                     session_string + "=" * (-len(session_string) % 4)
-                )
+                ),
             )
         else:
             dc_id, api_id, test_mode, auth_key, user_id, is_bot = struct.unpack(
                 cls.STRING_FORMAT,
                 base64.urlsafe_b64decode(
                     session_string + "=" * (-len(session_string) % 4)
-                )
+                ),
             )
 
         return cls(
@@ -115,7 +119,7 @@ class PyroSession:
         )
 
     @classmethod
-    async def from_file(cls, path: "Path"):
+    async def from_file(cls, path: Path):
         if not await cls.validate(path):
             raise ValidationError()
 
@@ -124,10 +128,10 @@ class PyroSession:
             async with db.execute("SELECT * FROM sessions") as cursor:
                 session = await cursor.fetchone()
 
-        return cls(**session)
+        return cls(**session)  # type: ignore
 
     @classmethod
-    async def validate(cls, path: "Path") -> bool:
+    async def validate(cls, path: Path) -> bool:
         try:
             async with aiosqlite.connect(path) as db:
                 db.row_factory = aiosqlite.Row
@@ -153,10 +157,7 @@ class PyroSession:
         return True
 
     def client(
-        self,
-        api: Type[APIData],
-        proxy: None | dict = None,
-        no_updates: bool = True
+        self, api: Type[APIData], proxy: None | dict = None, no_updates: bool = True
     ) -> Client:
         client = Client(
             name=secrets.token_urlsafe(8),
@@ -181,11 +182,11 @@ class PyroSession:
             self.test_mode,
             self.auth_key,
             self.user_id or 9999,
-            self.is_bot
+            self.is_bot,
         )
         return base64.urlsafe_b64encode(packed).decode().rstrip("=")
 
-    async def to_file(self, path: "Path"):
+    async def to_file(self, path: Path):
         async with aiosqlite.connect(path) as db:
             await db.executescript(SCHEMA)
             await db.commit()
@@ -197,7 +198,7 @@ class PyroSession:
                 self.auth_key,
                 0,
                 self.user_id or 9999,
-                self.is_bot
+                self.is_bot,
             )
             await db.execute(sql, params)
             await db.commit()

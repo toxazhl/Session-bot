@@ -1,20 +1,21 @@
 import uuid
+from typing import Any
 
 from aiogram.utils.markdown import hlink
 from sqlalchemy import (
-    func,
-    Column,
     BigInteger,
-    DateTime,
-    String,
-    LargeBinary,
-    Integer,
     Boolean,
+    Column,
+    DateTime,
     ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID
 
-from bot.core.db.base import Base
+from bot.core.db.base.base import Base
 
 
 class User(Base):
@@ -22,6 +23,8 @@ class User(Base):
 
     id = Column(BigInteger, primary_key=True)
     phone_number = Column(String(16))
+    autocheck = Column(Boolean, default=False)
+    proxy_country = Column(String, default=True)
     creation_date = Column(DateTime(timezone=True), default=func.now())
 
     def __repr__(self) -> str:
@@ -35,6 +38,8 @@ class Session(Base):
     __tablename__ = "session"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    type = Column(String(16))
+    source = Column(String(16))
     user_id = Column(BigInteger, ForeignKey("user.id"))
     dc_id = Column(Integer)
     auth_key = Column(LargeBinary)
@@ -59,7 +64,7 @@ class Proxy(Base):
     password = Column(String(32))
     uses = Column(Integer, server_default="0")
 
-    def pyro_format(self) -> dict[str, int | str]:
+    def pyro_format(self) -> dict[str, Any]:
         return dict(
             scheme=self.scheme,
             hostname=self.host,

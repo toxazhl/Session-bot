@@ -1,7 +1,8 @@
 import base64
 import ipaddress
 import struct
-from typing import Type, TYPE_CHECKING
+from pathlib import Path
+from typing import Type
 
 import aiosqlite
 from opentele.api import APIData
@@ -9,11 +10,7 @@ from pyrogram.session.internals.data_center import DataCenter
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-from bot.core.sessions.exceptions import ValidationError
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
+from bot.core.session.exceptions import ValidationError
 
 SCHEMA = """
 CREATE TABLE version (version integer primary key);
@@ -55,12 +52,10 @@ CREATE TABLE update_state (
 
 
 class TeleSession:
-    _STRUCT_PREFORMAT = '>B{}sH256s'
-    CURRENT_VERSION = '1'
+    _STRUCT_PREFORMAT = ">B{}sH256s"
+    CURRENT_VERSION = "1"
     TABLES = {
-        "sessions": {
-            "dc_id", "server_address", "port", "auth_key", "takeout_id"
-            },
+        "sessions": {"dc_id", "server_address", "port", "auth_key", "takeout_id"},
         "entities": {"id", "hash", "username", "phone", "name", "date"},
         "sent_files": {"md5_digest", "file_size", "type", "id", "hash"},
         "update_state": {"id", "pts", "qts", "date", "seq"},
@@ -74,7 +69,7 @@ class TeleSession:
         auth_key: bytes,
         server_address: None | str = None,
         port: None | int = None,
-        takeout_id: None | int = None
+        takeout_id: None | int = None,
     ):
         self.dc_id = dc_id
         self.auth_key = auth_key
@@ -98,7 +93,7 @@ class TeleSession:
         )
 
     @classmethod
-    async def from_file(cls, path: "Path"):
+    async def from_file(cls, path: Path):
         if not await cls.validate(path):
             raise ValidationError()
 
@@ -110,7 +105,7 @@ class TeleSession:
         return cls(**session)
 
     @classmethod
-    async def validate(cls, path: "Path") -> bool:
+    async def validate(cls, path: Path) -> bool:
         try:
             async with aiosqlite.connect(path) as db:
                 db.row_factory = aiosqlite.Row
@@ -135,17 +130,14 @@ class TeleSession:
 
     @staticmethod
     def encode(x: bytes) -> str:
-        return base64.urlsafe_b64encode(x).decode('ascii')
+        return base64.urlsafe_b64encode(x).decode("ascii")
 
     @staticmethod
     def decode(x: str) -> bytes:
         return base64.urlsafe_b64decode(x)
 
     def client(
-        self,
-        api: "Type[APIData]",
-        proxy: None | dict = None,
-        no_updates: bool = True
+        self, api: Type[APIData], proxy: None | dict = None, no_updates: bool = True
     ):
         client = TelegramClient(
             session=StringSession(self.to_string()),
@@ -163,19 +155,19 @@ class TeleSession:
 
     def to_string(self) -> str:
         if self.server_address is None:
-            self.server_address, self.port = DataCenter(
-                self.dc_id, False, False, False
-            )
+            self.server_address, self.port = DataCenter(self.dc_id, False, False, False)
         ip = ipaddress.ip_address(self.server_address).packed
-        return self.CURRENT_VERSION + self.encode(struct.pack(
-            self._STRUCT_PREFORMAT.format(len(ip)),
-            self.dc_id,
-            ip,
-            self.port,
-            self.auth_key
-        ))
+        return self.CURRENT_VERSION + self.encode(
+            struct.pack(
+                self._STRUCT_PREFORMAT.format(len(ip)),
+                self.dc_id,
+                ip,
+                self.port,
+                self.auth_key,
+            )
+        )
 
-    async def to_file(self, path: "Path"):
+    async def to_file(self, path: Path):
         async with aiosqlite.connect(path) as db:
             await db.executescript(SCHEMA)
             await db.commit()
@@ -185,7 +177,7 @@ class TeleSession:
                 self.server_address,
                 self.port,
                 self.auth_key,
-                self.takeout_id
+                self.takeout_id,
             )
             await db.execute(sql, params)
             await db.commit()

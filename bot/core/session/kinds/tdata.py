@@ -1,17 +1,13 @@
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import Type
 
-from opentele.api import API
-from opentele.td import TDesktop, Account, AuthKeyType, AuthKey
-from opentele.td.configs import DcId
+from opentele.api import API, APIData
 from opentele.exception import TFileNotFound
+from opentele.td import Account, AuthKey, AuthKeyType, TDesktop
+from opentele.td.configs import DcId
 
-from bot.core.sessions.filemanager import FileManager
-from bot.core.sessions.exceptions import TFileError
-
-if TYPE_CHECKING:
-    from pathlib import Path
-    from opentele.api import APIData
-    from typing import Type
+from bot.core.session.exceptions import TFileError
+from bot.core.session.files import FileManager
 
 
 class TDataSession:
@@ -21,7 +17,7 @@ class TDataSession:
         dc_id: int,
         auth_key: bytes,
         user_id: int,
-        api: "Type[APIData]" = API.TelegramDesktop,
+        api: Type[APIData] = API.TelegramDesktop,
     ):
         self.dc_id = dc_id
         self.auth_key = auth_key
@@ -29,25 +25,19 @@ class TDataSession:
         self.api = api
 
     @classmethod
-    def from_tdata(cls, tdata_folder: "Path"):
-        if not tdata_folder.exists():
-            raise FileNotFoundError(tdata_folder)
-
+    def from_tdata(cls, tdata_folder: Path):
         try:
             client = TDesktop(basePath=tdata_folder)
-
         except TFileNotFound:
             raise TFileError
 
-        account = client.mainAccount
-
         return cls(
-            auth_key=account.authKey.key,
-            user_id=account.UserId,
-            dc_id=account.MainDcId
+            auth_key=client.mainAccount.authKey.key,
+            user_id=client.mainAccount.UserId,
+            dc_id=client.mainAccount.MainDcId,
         )
 
-    def to_folder(self, path: "Path"):
+    def to_folder(self, path: Path):
         path.mkdir(parents=True, exist_ok=True)
 
         dc_id = DcId(self.dc_id)
@@ -64,7 +54,7 @@ class TDataSession:
 
         client.SaveTData(path / "tdata")
 
-    def to_zip(self, path: "Path"):
+    def to_zip(self, path: Path):
         with FileManager() as fm:
             self.to_folder(fm.path)
             fm.zip(path)

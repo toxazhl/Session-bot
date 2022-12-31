@@ -1,23 +1,19 @@
-from typing import TYPE_CHECKING
-from secrets import token_urlsafe
 import zipfile
+from pathlib import Path
+from secrets import token_urlsafe
+from typing import Type
+from uuid import UUID
 
-from opentele.api import API
+from opentele.api import API, APIData
 from pyrogram.errors.rpc_error import RPCError
 
-from .sessions.pyro import PyroSession
-from .sessions.tele import TeleSession
-from .sessions.tdata import TDataSession
-from .filemanager import FileManager
-
+from bot.core.db import Repo
 from bot.core.db.models import Proxy, Session
 
-if TYPE_CHECKING:
-    from pathlib import Path
-    from uuid import UUID
-    from typing import Type
-    from bot.core.db import Repo
-    from opentele.api import APIData
+from .files import FileManager
+from .kinds.pyro import PyroSession
+from .kinds.tdata import TDataSession
+from .kinds.tele import TeleSession
 
 
 class SessionManager:
@@ -27,7 +23,7 @@ class SessionManager:
         auth_key: bytes,
         user_id: None | int = None,
         valid: None | bool = None,
-        api: "Type[APIData]" = API.TelegramDesktop,
+        api: Type[APIData] = API.TelegramDesktop,
         proxy: None | Proxy = None,
         first_name: None | str = None,
         last_name: None | str = None,
@@ -77,7 +73,7 @@ class SessionManager:
         return token_urlsafe(4)
 
     @classmethod
-    async def autoimport(cls, file: "Path", filename: None | str = None) -> None | str:
+    async def autoimport(cls, file: Path, filename: None | str = None) -> None | str:
         if await PyroSession.validate(file):
             return await cls.from_pyrogram_file(file, filename)
         if await TeleSession.validate(file):
@@ -100,7 +96,7 @@ class SessionManager:
 
     @classmethod
     async def from_database(
-        cls, session_id: "UUID", repo: "Repo", proxy: None | Proxy = None
+        cls, session_id: UUID, repo: "Repo", proxy: None | Proxy = None
     ):
         session = await repo.session.get(session_id)
         return cls.from_session(session, proxy)
@@ -121,7 +117,9 @@ class SessionManager:
         )
 
     @classmethod
-    async def from_telethon_file(cls, file: "Path", filename: None | str = None, api=API.TelegramDesktop):
+    async def from_telethon_file(
+        cls, file: Path, filename: None | str = None, api=API.TelegramDesktop
+    ):
         session = await TeleSession.from_file(file)
         return cls(
             dc_id=session.dc_id, auth_key=session.auth_key, api=api, filename=filename
@@ -133,7 +131,9 @@ class SessionManager:
         return cls(dc_id=session.dc_id, auth_key=session.auth_key, api=api)
 
     @classmethod
-    async def from_pyrogram_file(cls, file: "Path", filename: None | str = None, api=API.TelegramDesktop):
+    async def from_pyrogram_file(
+        cls, file: Path, filename: None | str = None, api=API.TelegramDesktop
+    ):
         session = await PyroSession.from_file(file)
         return cls(
             auth_key=session.auth_key,
@@ -154,7 +154,7 @@ class SessionManager:
         )
 
     @classmethod
-    def from_tdata_folder(cls, folder: "Path"):
+    def from_tdata_folder(cls, folder: Path):
         session = TDataSession.from_tdata(folder)
         return cls(
             auth_key=session.auth_key,
@@ -163,23 +163,23 @@ class SessionManager:
             filename=folder.name,
         )
 
-    async def to_pyrogram_file(self, path: "Path"):
+    async def to_pyrogram_file(self, path: Path):
         await self.pyrogram.to_file(path)
 
     def to_pyrogram_string(self) -> str:
         return self.pyrogram.to_string()
 
-    async def to_telethon_file(self, path: "Path"):
+    async def to_telethon_file(self, path: Path):
         await self.telethon.to_file(path)
 
     def to_telethon_string(self) -> str:
         return self.telethon.to_string()
 
-    async def to_tdata_folder(self, path: "Path"):
+    async def to_tdata_folder(self, path: Path):
         await self.get_user_id()
         self.tdata.to_folder(path)
 
-    async def to_tdata_zip(self, path: "Path"):
+    async def to_tdata_zip(self, path: Path):
         await self.get_user_id()
         self.tdata.to_zip(path)
 
@@ -229,10 +229,10 @@ class SessionManager:
     async def validate(self) -> bool:
         try:
             user = await self.get_user()
-    
+
         except RPCError:
             self.valid = False
-        
+
         else:
             self.valid = True
             self.first_name = user.first_name

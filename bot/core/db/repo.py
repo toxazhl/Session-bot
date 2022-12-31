@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .session import SessionRepo
-from .user import UserRepo
-from .proxy import ProxyRepo
-from .base_repo import BaseRepo
+from bot.core.db.base.repo import BaseRepo
+from bot.core.db.repository.proxy import ProxyRepo
+from bot.core.db.repository.session import SessionRepo
+from bot.core.db.repository.user import UserRepo
 
 
 class Repo(BaseRepo):

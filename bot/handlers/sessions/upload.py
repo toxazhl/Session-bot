@@ -1,18 +1,17 @@
 import logging
-import zipfile
 
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
 from bot import keyboards as kb
 from bot.core.db import Repo
 from bot.core.db.models import User
-from bot.core.sessions.filemanager import FileManager
-from bot.core.sessions.manager import SessionManager
+from bot.core.session.files import FileManager
+from bot.core.session.session import SessionManager
 from bot.misc.states import UploadStates
-from .menu import text_session
 
+from .menu import text_session
 
 logger = logging.getLogger(__name__)
 

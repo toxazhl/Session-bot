@@ -2,19 +2,20 @@ import logging
 
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery
-from pyrogram.client import Client
-from pyrogram import enums
-from pyrogram.errors import SessionPasswordNeeded, BadRequest
+from aiogram.types import CallbackQuery, Message
 from opentele.api import API
+from pyrogram import enums
+from pyrogram.client import Client
+from pyrogram.errors import BadRequest, SessionPasswordNeeded
 
 from bot import keyboards as kb
 from bot.core.db import Repo
-from bot.core.sessions.manager import SessionManager
+from bot.core.session.proxy import ProxyManager
+from bot.core.session.session import SessionManager
 from bot.misc.states import LoginStates
 from bot.misc.storage import AuthStorage
-from .menu import text_session
 
+from .menu import text_session
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +59,11 @@ async def upload_pyrogram_handler(query: CallbackQuery, state: FSMContext):
 
 
 @router.callback_query(F.data == "phone_confirm", LoginStates.phone_confirm)
-async def upload_pyrogram_handler(query: CallbackQuery, state: FSMContext, repo: Repo):
+async def upload_pyrogram_handler(
+    query: CallbackQuery, state: FSMContext, pm: ProxyManager
+):
     data = await state.get_data()
     api = API.TelegramDesktop.Generate(system="windows")
-    proxy = await repo.proxy.get_best()
     client = Client(
         name="Login",
         api_id=api.api_id,
@@ -72,7 +74,7 @@ async def upload_pyrogram_handler(query: CallbackQuery, state: FSMContext, repo:
         lang_code=api.lang_code,
         in_memory=True,
         phone_number=data["phone_number"],
-        proxy=proxy.pyro_format(),
+        proxy=pm.get.pyro_format(),
     )
     AuthStorage.set(query.from_user.id, client)
 

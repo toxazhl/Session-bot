@@ -6,8 +6,8 @@ from aiogram.utils.markdown import hcode
 
 from bot import keyboards as kb
 from bot.core.db import Repo
-from bot.core.sessions.manager import SessionManager
-from bot.core.sessions.filemanager import FileManager
+from bot.core.session.files import FileManager
+from bot.core.session.session import SessionManager
 from bot.misc.cd_data import SessionCb
 
 logger = logging.getLogger(__name__)
@@ -89,5 +89,5 @@ async def to_tdata_zip_handler(
     except TypeError:
         await query.answer(
             "❌ Для конвертации в tdata сессия должна быть валидной или должен присутствовать user_id",
-            show_alert=True
+            show_alert=True,
         )

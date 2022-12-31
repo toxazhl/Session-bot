@@ -4,19 +4,19 @@ from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import (
     CallbackQuery,
-    InputTextMessageContent,
-    InlineQueryResultArticle,
     InlineQuery,
+    InlineQueryResultArticle,
+    InputTextMessageContent,
     Message,
 )
 from aiogram.utils.markdown import hcode
 
 from bot import keyboards as kb
 from bot.core.db import Repo
-from bot.core.sessions.manager import SessionManager
+from bot.core.session.proxy import ProxyManager
+from bot.core.session.session import SessionManager
 from bot.misc.cd_data import SessionCb
 from bot.utils.gen_text import text_session
-
 
 logger = logging.getLogger(__name__)
 
@@ -88,10 +88,11 @@ async def show_session(query: CallbackQuery, callback_data: SessionCb, repo: Rep
 
 
 @router.callback_query(SessionCb.filter(F.action == "validate"))
-async def validate_handler(query: CallbackQuery, callback_data: SessionCb, repo: Repo):
+async def validate_handler(
+    query: CallbackQuery, callback_data: SessionCb, repo: Repo, pm: ProxyManager
+):
     session_id = callback_data.session_id
-    proxy = await repo.proxy.get_best()
-    manager = await SessionManager.from_database(session_id, repo, proxy)
+    manager = await SessionManager.from_database(session_id, repo, pm.get)
     await manager.validate()
     await repo.session.update(session_id, manager)
     await query.answer()

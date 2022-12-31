@@ -1,4 +1,4 @@
-from typing import Callable, Awaitable, Dict, Any
+from typing import Any, Awaitable, Callable, Dict
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, User
@@ -16,7 +16,7 @@ class UserMiddleware(BaseMiddleware):
         event: TelegramObject,
         data: Dict[str, Any],
     ) -> Any:
-        from_user: User = data.get('event_from_user')
+        from_user: User = data.get("event_from_user")
         repo: Repo = data["repo"]
 
         if from_user:

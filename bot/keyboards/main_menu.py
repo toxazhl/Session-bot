@@ -1,4 +1,4 @@
-from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 
 def menu():
@@ -19,4 +19,3 @@ def close():
     builder.button(text="❌ Закрыть", callback_data="close")
 
     return builder.as_markup(resize_keyboard=True)
-    
