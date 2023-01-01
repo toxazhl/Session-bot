@@ -40,6 +40,6 @@ async def error_key_datahandler(error: ErrorEvent):
 async def error_handler(error: ErrorEvent):
     await update_answer(
         error,
-        f"❌ Произошла ошибка {error.exception.__class__.__name__}: {error.exception}",
+        "❌ Произошла ошибка",
     )
     raise error.exception

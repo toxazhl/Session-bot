@@ -5,15 +5,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from opentele.api import API
 from pyrogram import enums
-from pyrogram.client import Client
 from pyrogram.errors import BadRequest, SessionPasswordNeeded
 
 from bot import keyboards as kb
-from bot.core.db import Repo
-from bot.core.session.proxy import ProxyManager
+from bot.core.db.repo import Repo
+from bot.core.session.auth import AuthManager
+from bot.core.session.enums import SessionSource
 from bot.core.session.session import SessionManager
 from bot.misc.states import LoginStates
-from bot.misc.storage import AuthStorage
 
 from .menu import text_session
 
@@ -23,7 +22,7 @@ router = Router()
 
 
 @router.message(F.text == "🆕 Войти")
-async def upload_session_handler(message: Message):
+async def login_handler(message: Message):
     await message.answer(
         "Выбери тип авторизации\n(Скоро будет доступен вход по QR)",
         reply_markup=kb.sessions.auth_type(),
@@ -31,7 +30,7 @@ async def upload_session_handler(message: Message):
 
 
 @router.callback_query(F.data == "login_phone")
-async def upload_pyrogram_handler(query: CallbackQuery, state: FSMContext):
+async def login_phone_handler(query: CallbackQuery, state: FSMContext):
     await query.answer()
     await state.set_state(LoginStates.phone_number)
     await query.message.edit_text(
@@ -42,7 +41,7 @@ async def upload_pyrogram_handler(query: CallbackQuery, state: FSMContext):
 
 
 @router.message(LoginStates.phone_number)
-async def upload_session_handler(message: Message, state: FSMContext):
+async def phone_number_handler(message: Message, state: FSMContext):
     phone_number = "".join(x for x in message.text if x.isdigit())
     await state.update_data(phone_number=phone_number)
     await message.answer(
@@ -53,32 +52,20 @@ async def upload_session_handler(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data == "phone_cancel", LoginStates.phone_confirm)
-async def upload_pyrogram_handler(query: CallbackQuery, state: FSMContext):
+async def phone_cancel_handler(query: CallbackQuery, state: FSMContext):
     await state.clear()
     await query.message.edit_text("❌ Отменено")
 
 
 @router.callback_query(F.data == "phone_confirm", LoginStates.phone_confirm)
-async def upload_pyrogram_handler(
-    query: CallbackQuery, state: FSMContext, pm: ProxyManager
+async def phone_confirm_handler(
+    query: CallbackQuery, state: FSMContext, auth_manager: AuthManager
 ):
     data = await state.get_data()
     api = API.TelegramDesktop.Generate(system="windows")
-    client = Client(
-        name="Login",
-        api_id=api.api_id,
-        api_hash=api.api_hash,
-        app_version=api.app_version,
-        device_model=api.device_model,
-        system_version=api.system_version,
-        lang_code=api.lang_code,
-        in_memory=True,
-        phone_number=data["phone_number"],
-        proxy=pm.get.pyro_format(),
+    client = await auth_manager.create(
+        user_id=query.from_user.id, api=api, phone_number=data["phone_number"]
     )
-    AuthStorage.set(query.from_user.id, client)
-
-    await client.connect()
 
     try:
         sent_code = await client.send_code(phone_number=client.phone_number)
@@ -106,9 +93,11 @@ async def upload_pyrogram_handler(
 
 
 @router.message(F.text, LoginStates.phone_code)
-async def upload_pyrogram_handler(message: Message, state: FSMContext, repo: Repo):
+async def phone_code_handler(
+    message: Message, state: FSMContext, repo: Repo, auth_manager: AuthManager
+):
     data = await state.get_data()
-    client = AuthStorage.get(message.from_user.id)
+    client = auth_manager.get(message.from_user.id)
 
     try:
         signed_in = await client.sign_in(
@@ -121,7 +110,7 @@ async def upload_pyrogram_handler(message: Message, state: FSMContext, repo: Rep
             reply_markup=kb.main_menu.close(),
         )
 
-    except SessionPasswordNeeded as e:
+    except SessionPasswordNeeded:
         await state.set_state(LoginStates.password)
         hint = await client.get_password_hint()
         await message.answer(
@@ -136,26 +125,28 @@ async def upload_pyrogram_handler(message: Message, state: FSMContext, repo: Rep
             dc_id=await client.storage.dc_id(),
             auth_key=await client.storage.auth_key(),
             user_id=signed_in.id,
+            source=SessionSource.LOGIN_PHONE,
         )
         session = await repo.session.add_from_manager(message.from_user.id, manager)
-        await client.disconnect()
-        AuthStorage._del(message.from_user.id)
+        await auth_manager.close(message.from_user.id)
 
         await message.answer(
-            text_session(manager), reply_markup=kb.sessions.action(session.id)
+            text=text_session(manager), reply_markup=kb.sessions.action(session.id)
         )
 
 
 @router.message(LoginStates.password)
-async def upload_session_handler(message: Message, state: FSMContext, repo: Repo):
-    client = AuthStorage.get(message.from_user.id)
+async def upload_session_handler(
+    message: Message, state: FSMContext, repo: Repo, auth_manager: AuthManager
+):
+    client = auth_manager.get(message.from_user.id)
 
     try:
         signed_in = await client.check_password(message.text)
 
     except BadRequest as e:
         await message.answer(
-            f"❌ Ошибка:\n<b>{e.MESSAGE}</b>\n\nПопробуйте еще раз",
+            f"❌ Ошибка:\n<b>{e.MESSAGE}</b>\n\nПопробуй еще раз",
             reply_markup=kb.main_menu.close(),
         )
 
@@ -165,10 +156,14 @@ async def upload_session_handler(message: Message, state: FSMContext, repo: Repo
             dc_id=await client.storage.dc_id(),
             auth_key=await client.storage.auth_key(),
             user_id=signed_in.id,
+            valid=True,
+            first_name=client.me.first_name,
+            last_name=client.me.last_name,
+            username=client.me.username,
+            phone=client.me.phone_number,
         )
         session = await repo.session.add_from_manager(message.from_user.id, manager)
-        await client.disconnect()
-        AuthStorage._del(message.from_user.id)
+        await auth_manager.close(message.from_user.id)
 
         await message.answer(
             text_session(manager), reply_markup=kb.sessions.action(session.id)

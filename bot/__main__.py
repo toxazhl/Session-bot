@@ -5,7 +5,6 @@ import os
 
 import yaml
 from aiogram import Bot, Dispatcher, F
-from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 from aiohttp import web
@@ -14,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from bot.core.config.configreader import Config
+from bot.core.session.auth import AuthManager
 from bot.core.session.proxy import ProxyManager
 from bot.handlers import setup_routers
 from bot.middlewares.db import DbSessionMiddleware
@@ -43,20 +43,20 @@ async def main():
     engine = create_async_engine(config.postgres_dsn, future=True)
     db_pool = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
+    storage = RedisStorage.from_url(config.redis_dsn) if config.bot.use_redis else None
     bot = Bot(token=config.bot.token, parse_mode="HTML")
+    dp = Dispatcher(storage=storage)
 
-    if config.bot.use_redis:
-        dp = Dispatcher(storage=RedisStorage.from_url(config.redis_dsn))
-    else:
-        dp = Dispatcher(storage=MemoryStorage())
-
-    pm = ProxyManager(db_pool)
+    proxy_manager = ProxyManager(db_pool)
+    auth_manager = AuthManager(proxy_manager=proxy_manager, timeout=600)
 
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(pm.update, "interval", seconds=60)
+    scheduler.add_job(proxy_manager.update, "interval", seconds=60)
+    scheduler.add_job(auth_manager.timeout_close, "interval", seconds=60)
     scheduler.start()
 
-    dp["pm"] = pm
+    dp["proxy_manager"] = proxy_manager
+    dp["auth_manager"] = auth_manager
 
     dp.message.filter(F.chat.type == "private")
     dp.update.outer_middleware(DbSessionMiddleware(db_pool))

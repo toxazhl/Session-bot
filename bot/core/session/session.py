@@ -7,9 +7,10 @@ from uuid import UUID
 from opentele.api import API, APIData
 from pyrogram.errors.rpc_error import RPCError
 
-from bot.core.db import Repo
 from bot.core.db.models import Proxy, Session
+from bot.core.db.repo import Repo
 
+from .enums import SessionSource
 from .files import FileManager
 from .kinds.pyro import PyroSession
 from .kinds.tdata import TDataSession
@@ -30,6 +31,7 @@ class SessionManager:
         username: None | str = None,
         phone: None | str = None,
         filename: None | str = None,
+        source: None | SessionSource = None,
     ):
         self.dc_id = dc_id
         self.auth_key = auth_key
@@ -42,6 +44,7 @@ class SessionManager:
         self.username = username
         self.phone = phone
         self.filename = filename
+        self.source = source
         self.user = None
         self.client = None
 
@@ -69,7 +72,7 @@ class SessionManager:
         if self.first_name:
             return f"{self.first_name}"
         if self.user_id:
-            return self.user_id
+            return str(self.user_id)
         return token_urlsafe(4)
 
     @classmethod
@@ -78,25 +81,25 @@ class SessionManager:
             return await cls.from_pyrogram_file(file, filename)
         if await TeleSession.validate(file):
             return await cls.from_telethon_file(file, filename)
-        # try:
-        with FileManager() as fm:
-            with zipfile.ZipFile(file) as f:
-                f.extractall(fm.path)
 
-            if fm.path.joinpath("tdata").exists():
-                tdata_path = fm.path.joinpath("tdata")
-            else:
-                tdata_path = fm.path
+        try:
+            with FileManager() as fm:
+                with zipfile.ZipFile(file) as f:
+                    f.extractall(fm.path)
 
-            return SessionManager.from_tdata_folder(tdata_path)
+                if fm.path.joinpath("tdata").exists():
+                    tdata_path = fm.path.joinpath("tdata")
+                else:
+                    tdata_path = fm.path
 
-        # except Exception as e:
-        #     print(e.__class__.__name__, e)
-        #     return None
+                return SessionManager.from_tdata_folder(tdata_path)
+
+        except Exception:
+            return None
 
     @classmethod
     async def from_database(
-        cls, session_id: UUID, repo: "Repo", proxy: None | Proxy = None
+        cls, session_id: UUID, repo: Repo, proxy: None | Proxy = None
     ):
         session = await repo.session.get(session_id)
         return cls.from_session(session, proxy)
@@ -122,13 +125,22 @@ class SessionManager:
     ):
         session = await TeleSession.from_file(file)
         return cls(
-            dc_id=session.dc_id, auth_key=session.auth_key, api=api, filename=filename
+            dc_id=session.dc_id,
+            auth_key=session.auth_key,
+            api=api,
+            filename=filename,
+            source=SessionSource.TELETHON_FILE,
         )
 
     @classmethod
     def from_telethon_string(cls, string: str, api=API.TelegramDesktop):
         session = TeleSession.from_string(string)
-        return cls(dc_id=session.dc_id, auth_key=session.auth_key, api=api)
+        return cls(
+            dc_id=session.dc_id,
+            auth_key=session.auth_key,
+            api=api,
+            source=SessionSource.TELETHON_STRING,
+        )
 
     @classmethod
     async def from_pyrogram_file(
@@ -141,6 +153,7 @@ class SessionManager:
             api=api,
             user_id=session.user_id,
             filename=filename,
+            source=SessionSource.PYROGRAM_FILE,
         )
 
     @classmethod
@@ -151,6 +164,7 @@ class SessionManager:
             dc_id=session.dc_id,
             api=api,
             user_id=session.user_id,
+            source=SessionSource.PYROGRAM_STRING,
         )
 
     @classmethod
@@ -161,6 +175,7 @@ class SessionManager:
             dc_id=session.dc_id,
             api=session.api,
             filename=folder.name,
+            source=SessionSource.TDATA,
         )
 
     async def to_pyrogram_file(self, path: Path):

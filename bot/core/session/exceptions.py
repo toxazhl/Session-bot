@@ -4,3 +4,7 @@ class ValidationError(Exception):
 
 class TFileError(Exception):
     pass
+
+
+class ClientNotFoundError(Exception):
+    pass

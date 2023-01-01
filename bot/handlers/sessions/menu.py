@@ -12,7 +12,7 @@ from aiogram.types import (
 from aiogram.utils.markdown import hcode
 
 from bot import keyboards as kb
-from bot.core.db import Repo
+from bot.core.db.repo import Repo
 from bot.core.session.proxy import ProxyManager
 from bot.core.session.session import SessionManager
 from bot.misc.cd_data import SessionCb
@@ -24,7 +24,7 @@ router = Router()
 
 
 @router.message(F.text == "📝 История")
-async def tele_string_handler(message: Message):
+async def history_handler(message: Message):
     await message.answer(
         "🔽 Нажми на кнопку что-бы посмотреть ранее созданные или загруженные сессии\n"
         "🔍 Также ты можешь искать сессии по номеру, имени, юзернейму или ID",
@@ -33,7 +33,7 @@ async def tele_string_handler(message: Message):
 
 
 @router.message(F.via_bot)
-async def tele_string_handler(message: Message, repo: Repo):
+async def session_handler(message: Message, repo: Repo):
     session = await repo.session.get(message.text)
     manager = SessionManager.from_session(session)
 
@@ -45,7 +45,7 @@ async def tele_string_handler(message: Message, repo: Repo):
 @router.inline_query()
 async def show_user_links(inline_query: InlineQuery, repo: Repo):
     offset = int(inline_query.offset) if inline_query.offset else 0
-    sessions = await repo.session.get_all(
+    sessions = await repo.session.search(
         inline_query.from_user.id, offset, query=inline_query.query
     )
     results = []
@@ -79,26 +79,30 @@ async def show_user_links(inline_query: InlineQuery, repo: Repo):
 
 @router.callback_query(SessionCb.filter(F.action == "back"))
 async def show_session(query: CallbackQuery, callback_data: SessionCb, repo: Repo):
-    session_id = callback_data.session_id
-    manager = await SessionManager.from_database(session_id, repo)
+    manager = await SessionManager.from_database(callback_data.session_id, repo)
 
     await query.message.edit_text(
-        text_session(manager), reply_markup=kb.sessions.action(session_id)
+        text_session(manager), reply_markup=kb.sessions.action(callback_data.session_id)
     )
 
 
 @router.callback_query(SessionCb.filter(F.action == "validate"))
 async def validate_handler(
-    query: CallbackQuery, callback_data: SessionCb, repo: Repo, pm: ProxyManager
+    query: CallbackQuery,
+    callback_data: SessionCb,
+    repo: Repo,
+    proxy_manager: ProxyManager,
 ):
-    session_id = callback_data.session_id
-    manager = await SessionManager.from_database(session_id, repo, pm.get)
+    manager = await SessionManager.from_database(
+        callback_data.session_id, repo, proxy_manager.get()
+    )
     await manager.validate()
-    await repo.session.update(session_id, manager)
-    await query.answer()
+    await repo.session.update(callback_data.session_id, manager)
+    await query.answer(("❌ Не валид", "✅ Валид")[manager.valid])
     try:
         await query.message.edit_text(
-            text_session(manager), reply_markup=kb.sessions.action(session_id)
+            text_session(manager),
+            reply_markup=kb.sessions.action(callback_data.session_id),
         )
     except TelegramBadRequest:
         pass
@@ -106,9 +110,8 @@ async def validate_handler(
 
 @router.callback_query(SessionCb.filter(F.action == "auth_key"))
 async def auth_key_handler(query: CallbackQuery, callback_data: SessionCb, repo: Repo):
-    session_id = callback_data.session_id
-    manager = await SessionManager.from_database(session_id, repo)
+    manager = await SessionManager.from_database(callback_data.session_id, repo)
     await query.message.edit_text(
         hcode(manager.auth_key_hex),
-        reply_markup=kb.sessions.back_to_session(session_id),
+        reply_markup=kb.sessions.back_to_session(callback_data.session_id),
     )

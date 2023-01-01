@@ -5,8 +5,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
 from bot import keyboards as kb
-from bot.core.db import Repo
 from bot.core.db.models import User
+from bot.core.db.repo import Repo
+from bot.core.session.enums import SessionSource
 from bot.core.session.files import FileManager
 from bot.core.session.session import SessionManager
 from bot.misc.states import UploadStates
@@ -92,6 +93,7 @@ async def manual_user_id_handler(
         auth_key=bytes.fromhex(data["auth_key"]),
         dc_id=data["dc_id"],
         user_id=user_id,
+        source=SessionSource.MANUAL,
     )
 
     session = await repo.session.add_from_manager(user.id, manager)
@@ -110,6 +112,7 @@ async def skip_user_id_handler(
     manager = SessionManager(
         auth_key=bytes.fromhex(data["auth_key"]),
         dc_id=data["dc_id"],
+        source=SessionSource.MANUAL,
     )
 
     session = await repo.session.add_from_manager(user.id, manager)

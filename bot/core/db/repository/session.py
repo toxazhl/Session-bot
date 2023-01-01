@@ -1,10 +1,14 @@
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import or_, select, update
 
 from bot.core.db.base.repo import BaseRepo
 from bot.core.db.models import Session
-from bot.core.session.session import SessionManager
+from bot.core.session.enums import SessionSource
+
+if TYPE_CHECKING:
+    from bot.core.session.session import SessionManager
 
 
 class SessionRepo(BaseRepo):
@@ -15,7 +19,12 @@ class SessionRepo(BaseRepo):
         auth_key: bytes,
         telegram_id: None | int = None,
         valid: None | bool = None,
+        first_name: None | str = None,
+        last_name: None | str = None,
+        username: None | str = None,
+        phone: None | str = None,
         filename: None | str = None,
+        source: None | SessionSource = None,
     ) -> Session:
         session = Session(
             user_id=user_id,
@@ -23,22 +32,34 @@ class SessionRepo(BaseRepo):
             dc_id=dc_id,
             telegram_id=telegram_id,
             valid=valid,
+            first_name=first_name,
+            last_name=last_name,
+            username=username,
+            phone=phone,
             filename=filename,
+            source=source,
         )
         await self.commit(session)
         return session
 
-    async def add_from_manager(self, user_id: int, manager: SessionManager) -> Session:
+    async def add_from_manager(
+        self, user_id: int, manager: "SessionManager"
+    ) -> Session:
         return await self.add(
             user_id=user_id,
             dc_id=manager.dc_id,
             auth_key=manager.auth_key,
             telegram_id=manager.user_id,
             valid=manager.valid,
+            first_name=manager.first_name,
+            last_name=manager.last_name,
+            username=manager.username,
+            phone=manager.phone,
             filename=manager.filename,
+            source=manager.source,
         )
 
-    async def update(self, session_id: UUID, manager: SessionManager) -> None:
+    async def update(self, session_id: UUID, manager: "SessionManager") -> None:
         stmt = (
             update(Session)
             .where(Session.id == session_id)
@@ -58,7 +79,7 @@ class SessionRepo(BaseRepo):
         stmt = select(Session).where(Session.id == id)
         return await self.scalar(stmt)
 
-    async def get_all(
+    async def search(
         self, user_id: int, offset: int = 0, limit: int = 50, query: None | str = None
     ) -> list[Session]:
         search_columns = (

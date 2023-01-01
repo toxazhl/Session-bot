@@ -1,9 +1,10 @@
 import logging
+from typing import Any
 
 from sqlalchemy.orm import sessionmaker
 
-from bot.core.db import Repo
 from bot.core.db.models import Proxy
+from bot.core.db.repo import Repo
 
 logger = logging.getLogger()
 
@@ -19,10 +20,14 @@ class ProxyManager:
             self.proxies = await Repo(session).proxy.get_all()
             logger.debug(f"Updated {len(self.proxies)} proxies")
 
-    @property
-    def get(self):
+    def get(self) -> None | Proxy:
         if self.proxies:
             self.n += 1
             if self.n >= len(self.proxies):
                 self.n = 0
             return self.proxies[self.n]
+
+    def get_pyro(self) -> None | dict[str, Any]:
+        proxy = self.get()
+        if proxy:
+            return proxy.pyro_format()

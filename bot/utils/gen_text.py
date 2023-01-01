@@ -1,11 +1,14 @@
 from aiogram.utils.markdown import hcode, hlink
-from telethon.tl.types import UserStatusOffline, UserStatusOnline, UserStatusRecently
+from pyrogram.enums.user_status import UserStatus
 
 from bot.core.session.session import SessionManager
 
 
 def text_session(manager: SessionManager) -> str:
-    t = "📂 Session\n\n"  # text
+    if manager.source:
+        t = f"📂 Session [{manager.source.name}]\n\n"  # text
+    else:
+        t = "📂 Session\n\n"  # text
 
     user = manager.user
     link = "tg://user?id="
@@ -15,20 +18,20 @@ def text_session(manager: SessionManager) -> str:
     t += f"☑️ Valid: {hcode(valid)}\n"
 
     if manager.user_id:
-        t += f"🪪 User:\n"
+        t += "🪪 User:\n"
         if manager.first_name:
             t += f'├─👤 Name: {hlink(manager.first_name, f"{link}{manager.user_id}")}\n'
         t += f"├─📧 Username: @{manager.username}\n" if manager.username else ""
         t += f"├─☎️ Phone: <code>{manager.phone}</code>\n" if manager.phone else ""
 
-        if user and user.status:
+        if user:
             status = ""
-            if isinstance(user.status, UserStatusOnline):
+            if user.status == UserStatus.ONLINE:
                 status = "🟢 Online"
-            elif isinstance(user.status, UserStatusRecently):
+            elif user.status == UserStatus.RECENTLY:
                 status = "🟡 Recently"
-            elif isinstance(user.status, UserStatusOffline) and user.status.was_online:
-                status = f"🔴 {user.status.was_online:%Y.%m.%d %H:%M:%S}"
+            elif user.status == UserStatus.OFFLINE and user.last_online_date:
+                status = f"🔴 {user.last_online_date:%Y.%m.%d %H:%M:%S}"
 
             t += f"├─📶 Status: {status}\n" if status else ""
 

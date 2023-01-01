@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Enum,
     ForeignKey,
     Integer,
     LargeBinary,
@@ -16,6 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 
 from bot.core.db.base.base import Base
+from bot.core.session.enums import SessionSource
 
 
 class User(Base):
@@ -24,7 +26,7 @@ class User(Base):
     id = Column(BigInteger, primary_key=True)
     phone_number = Column(String(16))
     autocheck = Column(Boolean, default=False)
-    proxy_country = Column(String, default=True)
+    proxy_country = Column(String)
     creation_date = Column(DateTime(timezone=True), default=func.now())
 
     def __repr__(self) -> str:
@@ -38,8 +40,6 @@ class Session(Base):
     __tablename__ = "session"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    type = Column(String(16))
-    source = Column(String(16))
     user_id = Column(BigInteger, ForeignKey("user.id"))
     dc_id = Column(Integer)
     auth_key = Column(LargeBinary)
@@ -50,7 +50,11 @@ class Session(Base):
     username = Column(String(32))
     phone = Column(String(16))
     filename = Column(String(256))
+    source = Column(Enum(SessionSource))
     creation_date = Column(DateTime(timezone=True), default=func.now())
+
+    def __repr__(self) -> str:
+        return f"Session(id={self.id}, user_id={self.user_id}, telegram_id={self.telegram_id})"
 
 
 class Proxy(Base):
@@ -63,6 +67,11 @@ class Proxy(Base):
     login = Column(String(32))
     password = Column(String(32))
     uses = Column(Integer, server_default="0")
+
+    def __repr__(self) -> str:
+        return (
+            f"Proxy(id={self.id}, host={self.host}, port={self.port} uses={self.uses})"
+        )
 
     def pyro_format(self) -> dict[str, Any]:
         return dict(

@@ -5,7 +5,7 @@ from aiogram.types import CallbackQuery, FSInputFile
 from aiogram.utils.markdown import hcode
 
 from bot import keyboards as kb
-from bot.core.db import Repo
+from bot.core.db.repo import Repo
 from bot.core.session.files import FileManager
 from bot.core.session.session import SessionManager
 from bot.misc.cd_data import SessionCb
