@@ -56,7 +56,7 @@ async def show_user_links(inline_query: InlineQuery, repo: Repo):
         if session.first_name:
             title = session.first_name + " " + (session.last_name or "")
         else:
-            title = session.telegram_id or session.id
+            title = session.telegram_id or str(session.id)
 
         description = str(session.telegram_id)
         if session.phone:
@@ -66,8 +66,8 @@ async def show_user_links(inline_query: InlineQuery, repo: Repo):
 
         results.append(
             InlineQueryResultArticle(
-                id=str(session.id),  # ссылки у нас уникальные, потому проблем не будет
-                title=str(title),
+                id=str(session.id),
+                title=title,
                 description=description,
                 input_message_content=InputTextMessageContent(
                     message_text=str(session.id),
@@ -98,24 +98,11 @@ async def validate_handler(
 ):
     manager = await SessionManager.from_database(callback_data.session_id, repo)
     api = API.TelegramDesktop.Generate(system="windows")
-    async with client_manager.new(
-        api_id=api.api_id,
-        api_hash=api.api_hash,
-        app_version=api.app_version,
-        device_model=api.device_model,
-        system_version=api.system_version,
-        lang_code=api.lang_code,
-        session_string=manager.to_pyrogram_string(),
-        timeout=20,
-    ) as client:
-        await manager.validate(client)
+    await manager.validate(client_manager, api)
 
     await repo.session.update(callback_data.session_id, manager)
     try:
-        if manager.valid:
-            await query.answer("✅ Валид")
-        else:
-            await query.answer("❌ Не валид")
+        await query.answer("✅ Валид" if manager.valid else "❌ Не валид")
     except TelegramBadRequest:
         pass
 

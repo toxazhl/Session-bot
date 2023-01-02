@@ -14,11 +14,11 @@ class SessionSource(Enum):
     PYROGRAM_STRING = auto()
     """Pyrogram string session"""
 
-    LOGIN_PHONE = auto()
-    """Login by phone"""
-
     TDATA = auto()
     """Tdata session"""
+
+    LOGIN_PHONE = auto()
+    """Login by phone"""
 
     MANUAL = auto()
     """Manual create"""

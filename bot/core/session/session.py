@@ -239,9 +239,21 @@ class SessionManager:
     #     )
     #     return client
 
-    async def validate(self, client: Client) -> bool:
+    async def validate(
+        self, client_manager: ClientManager, api: Type[APIData] | APIData
+    ) -> bool:
         try:
-            user = await client.get_me()
+            async with client_manager.new(
+                api_id=api.api_id,
+                api_hash=api.api_hash,
+                app_version=api.app_version,
+                device_model=api.device_model,
+                system_version=api.system_version,
+                lang_code=api.lang_code,
+                session_string=self.to_pyrogram_string(),
+                timeout=20,
+            ) as client:
+                user = await client.get_me()
 
         except RPCError:
             self.valid = False
