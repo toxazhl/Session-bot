@@ -11,4 +11,4 @@ class UserRepo(BaseRepo):
 
     async def get(self, id: int) -> User:
         stmt = select(User).where(User.id == id)
-        return await self.scalar(stmt)
+        return await self._scalar(stmt)

@@ -22,7 +22,8 @@ router = Router()
 
 
 @router.message(F.text == "🆕 Войти")
-async def login_handler(message: Message):
+async def login_handler(message: Message, state: FSMContext):
+    await state.clear()
     await message.answer(
         "Выбери тип авторизации\n(Скоро будет доступен вход по QR)",
         reply_markup=kb.sessions.auth_type(),

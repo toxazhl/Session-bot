@@ -13,11 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from bot.core.config.configreader import Config
+from bot.core.payment.crystalpay import CrystalPay
 from bot.core.session.client import ClientManager
 from bot.core.session.proxy import ProxyManager
 from bot.handlers import setup_routers
 from bot.middlewares.db import DbSessionMiddleware
 from bot.middlewares.user import UserMiddleware
+from bot.web.crystalpay import crystalpay_callback
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,12 @@ async def main():
 
     proxy_manager = ProxyManager(db_pool)
     client_manager = ClientManager(proxy_manager=proxy_manager)
-
+    crystalpay = CrystalPay(
+        name=config.crystalpay.name,
+        secret1=config.crystalpay.secret1,
+        secret2=config.crystalpay.secret2,
+        callback=f"{config.web.domain}{config.web.path.crystalpay}",
+    )
     scheduler = AsyncIOScheduler()
     scheduler.add_job(proxy_manager.update, "interval", seconds=60)
     scheduler.add_job(client_manager.terminate_timeout, "interval", seconds=5)
@@ -57,6 +64,7 @@ async def main():
 
     dp["proxy_manager"] = proxy_manager
     dp["client_manager"] = client_manager
+    dp["crystalpay"] = crystalpay
 
     dp.message.filter(F.chat.type == "private")
     dp.update.outer_middleware(DbSessionMiddleware(db_pool))
@@ -75,6 +83,10 @@ async def main():
         else:
             app = web.Application()
 
+            app["db_pool"] = db_pool
+            app["crystalpay"] = crystalpay
+            app["bot"] = bot
+
             me = await bot.get_me()
             url = f"{config.web.domain}{config.web.path.bot}"
             logger.info(
@@ -90,6 +102,8 @@ async def main():
             SimpleRequestHandler(dispatcher=dp, bot=bot).register(
                 app, path=config.web.path.bot
             )
+
+            app.add_routes([web.get(config.web.path.crystalpay, crystalpay_callback)])
 
             # Creating aiohttp server
             runner = web.AppRunner(app)

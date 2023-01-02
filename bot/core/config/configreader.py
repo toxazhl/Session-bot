@@ -8,6 +8,7 @@ class Bot(BaseModel):
 
 class Path(BaseModel):
     bot: str
+    crystalpay: str
 
 
 class Web(BaseModel):
@@ -18,11 +19,18 @@ class Web(BaseModel):
     path: Path
 
 
+class CrystalPay(BaseModel):
+    name: str
+    secret1: str
+    secret2: str
+
+
 class Config(BaseSettings):
     bot: Bot
     web: Web
     postgres_dsn: PostgresDsn
     redis_dsn: None | RedisDsn
+    crystalpay: CrystalPay
 
     class Config:
         env_file = ".env"

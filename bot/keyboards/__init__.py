@@ -1,3 +1,3 @@
-from . import main_menu, sessions
+from . import main_menu, profile, sessions
 
-__all__ = ["main_menu", "sessions"]
+__all__ = ["main_menu", "sessions", "profile"]

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import func, or_, select, update
 
 from bot.core.db.base.repo import BaseRepo
 from bot.core.db.models import Session
@@ -72,12 +72,12 @@ class SessionRepo(BaseRepo):
                 phone=manager.phone,
             )
         )
-        await self.execute(stmt)
+        await self._execute(stmt)
         await self.commit()
 
     async def get(self, id: UUID) -> Session:
         stmt = select(Session).where(Session.id == id)
-        return await self.scalar(stmt)
+        return await self._scalar(stmt)
 
     async def search(
         self, user_id: int, offset: int = 0, limit: int = 50, query: None | str = None
@@ -103,4 +103,11 @@ class SessionRepo(BaseRepo):
             .order_by(Session.creation_date.desc())
         )
 
-        return await self.scalars_all(stmt)
+        return await self._scalars_all(stmt)
+
+    async def count(self, user_id: None | int = None) -> int:
+        stmt = select(func.count(Session.id))
+        if user_id:
+            stmt = stmt.where(Session.user_id == user_id)
+
+        return await self._scalar(stmt)

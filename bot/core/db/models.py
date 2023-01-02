@@ -25,8 +25,8 @@ class User(Base):
 
     id = Column(BigInteger, primary_key=True)
     phone_number = Column(String(16))
+    balance = Column(BigInteger, default=0)
     autocheck = Column(Boolean, default=False)
-    proxy_country = Column(String)
     creation_date = Column(DateTime(timezone=True), default=func.now())
 
     def __repr__(self) -> str:

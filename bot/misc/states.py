@@ -13,3 +13,7 @@ class LoginStates(StatesGroup):
     phone_confirm = State()
     phone_code = State()
     password = State()
+
+
+class ProfileStates(StatesGroup):
+    refill_amount = State()
