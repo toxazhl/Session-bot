@@ -4,17 +4,22 @@ from secrets import token_urlsafe
 from typing import Type
 from uuid import UUID
 
-from opentele.api import API, APIData
+from opentele.api import APIData
 from pyrogram.errors.rpc_error import RPCError
+from typing_extensions import Self
 
-from bot.core.db.models import Proxy, Session
+from bot.core.db.models import Session
 from bot.core.db.repo import Repo
 
+from .client import Client, ClientManager
 from .enums import SessionSource
+from .exceptions import ClientManagerNotInitialized, UserIdNoneError
 from .files import FileManager
 from .kinds.pyro import PyroSession
 from .kinds.tdata import TDataSession
 from .kinds.tele import TeleSession
+
+# api: Type[APIData] | APIData
 
 
 class SessionManager:
@@ -24,38 +29,41 @@ class SessionManager:
         auth_key: bytes,
         user_id: None | int = None,
         valid: None | bool = None,
-        api: Type[APIData] = API.TelegramDesktop,
-        proxy: None | Proxy = None,
         first_name: None | str = None,
         last_name: None | str = None,
         username: None | str = None,
         phone: None | str = None,
         filename: None | str = None,
         source: None | SessionSource = None,
+        client_manager: None | ClientManager = None,
     ):
         self.dc_id = dc_id
         self.auth_key = auth_key
         self.user_id = user_id
         self.valid = valid
-        self.api = api.Generate()
-        self.proxy = proxy
         self.first_name = first_name
         self.last_name = last_name
         self.username = username
         self.phone = phone
         self.filename = filename
         self.source = source
+        self.client_manager = client_manager
         self.user = None
-        self.client = None
 
-    async def __aenter__(self):
-        self.client = self.pyrogram_client()
-        await self.client.connect()
-        return self.client
+    def client(self, api: Type[APIData] | APIData, no_updates: None | bool = None):
+        if self.client_manager is None:
+            raise ClientManagerNotInitialized
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.client.disconnect()
-        self.client = None
+        return self.client_manager.new(
+            api_id=api.api_id,
+            api_hash=api.api_hash,
+            app_version=api.app_version,
+            device_model=api.device_model,
+            system_version=api.system_version,
+            lang_code=api.lang_code,
+            session_string=self.pyrogram.to_string(),
+            no_updates=no_updates,
+        )
 
     @property
     def auth_key_hex(self) -> str:
@@ -76,7 +84,7 @@ class SessionManager:
         return token_urlsafe(4)
 
     @classmethod
-    async def autoimport(cls, file: Path, filename: None | str = None) -> None | str:
+    async def autoimport(cls, file: Path, filename: None | str = None) -> None | Self:
         if await PyroSession.validate(file):
             return await cls.from_pyrogram_file(file, filename)
         if await TeleSession.validate(file):
@@ -98,14 +106,12 @@ class SessionManager:
             return None
 
     @classmethod
-    async def from_database(
-        cls, session_id: UUID, repo: Repo, proxy: None | Proxy = None
-    ):
+    async def from_database(cls, session_id: UUID, repo: Repo):
         session = await repo.session.get(session_id)
-        return cls.from_session(session, proxy)
+        return cls.from_session(session)
 
     @classmethod
-    def from_session(cls, session: Session, proxy: None | Proxy = None):
+    def from_session(cls, session: Session):
         return cls(
             dc_id=session.dc_id,
             auth_key=session.auth_key,
@@ -116,53 +122,44 @@ class SessionManager:
             username=session.username,
             phone=session.phone,
             filename=session.filename,
-            proxy=proxy,
         )
 
     @classmethod
-    async def from_telethon_file(
-        cls, file: Path, filename: None | str = None, api=API.TelegramDesktop
-    ):
+    async def from_telethon_file(cls, file: Path, filename: None | str = None):
         session = await TeleSession.from_file(file)
         return cls(
             dc_id=session.dc_id,
             auth_key=session.auth_key,
-            api=api,
             filename=filename,
             source=SessionSource.TELETHON_FILE,
         )
 
     @classmethod
-    def from_telethon_string(cls, string: str, api=API.TelegramDesktop):
+    def from_telethon_string(cls, string: str):
         session = TeleSession.from_string(string)
         return cls(
             dc_id=session.dc_id,
             auth_key=session.auth_key,
-            api=api,
             source=SessionSource.TELETHON_STRING,
         )
 
     @classmethod
-    async def from_pyrogram_file(
-        cls, file: Path, filename: None | str = None, api=API.TelegramDesktop
-    ):
+    async def from_pyrogram_file(cls, file: Path, filename: None | str = None):
         session = await PyroSession.from_file(file)
         return cls(
             auth_key=session.auth_key,
             dc_id=session.dc_id,
-            api=api,
             user_id=session.user_id,
             filename=filename,
             source=SessionSource.PYROGRAM_FILE,
         )
 
     @classmethod
-    def from_pyrogram_string(cls, string: str, api=API.TelegramDesktop):
+    def from_pyrogram_string(cls, string: str):
         session = PyroSession.from_string(string)
         return cls(
             auth_key=session.auth_key,
             dc_id=session.dc_id,
-            api=api,
             user_id=session.user_id,
             source=SessionSource.PYROGRAM_STRING,
         )
@@ -173,7 +170,7 @@ class SessionManager:
         return cls(
             auth_key=session.auth_key,
             dc_id=session.dc_id,
-            api=session.api,
+            # api=session.api,
             filename=folder.name,
             source=SessionSource.TDATA,
         )
@@ -190,12 +187,10 @@ class SessionManager:
     def to_telethon_string(self) -> str:
         return self.telethon.to_string()
 
-    async def to_tdata_folder(self, path: Path):
-        await self.get_user_id()
+    def to_tdata_folder(self, path: Path):
         self.tdata.to_folder(path)
 
-    async def to_tdata_zip(self, path: Path):
-        await self.get_user_id()
+    def to_tdata_zip(self, path: Path):
         self.tdata.to_zip(path)
 
     @property
@@ -215,62 +210,49 @@ class SessionManager:
 
     @property
     def tdata(self) -> TDataSession:
+        if self.user_id is None:
+            raise UserIdNoneError
+
         return TDataSession(
             dc_id=self.dc_id,
             auth_key=self.auth_key,
-            api=self.api,
+            # api=self.api,
             user_id=self.user_id,
         )
 
-    def pyrogram_client(self, proxy=None, no_updates=True):
-        if self.proxy and not proxy:
-            proxy = self.proxy.pyro_format()
+    # def pyrogram_client(self, proxy=None, no_updates=True):
+    #     if self.proxy and not proxy:
+    #         proxy = self.proxy.pyro_format()
 
-        client = self.pyrogram.client(
-            api=self.api,
-            proxy=proxy,
-            no_updates=no_updates,
-        )
-        return client
+    #     client = self.pyrogram.client(
+    #         api=self.api,
+    #         proxy=proxy,
+    #         no_updates=no_updates,
+    #     )
+    #     return client
 
-    def telethon_client(self, proxy=None, no_updates=True):
-        client = self.telethon.client(
-            api=self.api,
-            proxy=proxy or self.proxy,
-            no_updates=no_updates,
-        )
-        return client
+    # def telethon_client(self, proxy=None, no_updates=True):
+    #     client = self.telethon.client(
+    #         api=self.api,
+    #         proxy=proxy or self.proxy,
+    #         no_updates=no_updates,
+    #     )
+    #     return client
 
-    async def validate(self) -> bool:
+    async def validate(self, client: Client) -> bool:
         try:
-            user = await self.get_user()
+            user = await client.get_me()
 
         except RPCError:
             self.valid = False
 
         else:
             self.valid = True
+            self.user = user
+            self.user_id = user.id
             self.first_name = user.first_name
             self.last_name = user.last_name
             self.username = user.username
             self.phone = user.phone_number
 
         return self.valid
-
-    async def get_user_id(self):
-        if self.user_id:
-            return self.user_id
-
-        user = await self.get_user()
-
-        if user is None:
-            raise TypeError()
-
-        return user.id
-
-    async def get_user(self):
-        async with self as client:
-            self.user = await client.get_me()
-            if self.user:
-                self.user_id = self.user.id
-        return self.user

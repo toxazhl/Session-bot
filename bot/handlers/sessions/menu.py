@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from aiogram import F, Router
@@ -10,9 +11,11 @@ from aiogram.types import (
     Message,
 )
 from aiogram.utils.markdown import hcode
+from opentele.api import API
 
 from bot import keyboards as kb
 from bot.core.db.repo import Repo
+from bot.core.session.client import ClientManager
 from bot.core.session.proxy import ProxyManager
 from bot.core.session.session import SessionManager
 from bot.misc.cd_data import SessionCb
@@ -91,14 +94,31 @@ async def validate_handler(
     query: CallbackQuery,
     callback_data: SessionCb,
     repo: Repo,
-    proxy_manager: ProxyManager,
+    client_manager: ClientManager,
 ):
-    manager = await SessionManager.from_database(
-        callback_data.session_id, repo, proxy_manager.get()
-    )
-    await manager.validate()
+    manager = await SessionManager.from_database(callback_data.session_id, repo)
+    api = API.TelegramDesktop.Generate(system="windows")
+    async with client_manager.new(
+        api_id=api.api_id,
+        api_hash=api.api_hash,
+        app_version=api.app_version,
+        device_model=api.device_model,
+        system_version=api.system_version,
+        lang_code=api.lang_code,
+        session_string=manager.to_pyrogram_string(),
+        timeout=20,
+    ) as client:
+        await manager.validate(client)
+
     await repo.session.update(callback_data.session_id, manager)
-    await query.answer(("❌ Не валид", "✅ Валид")[manager.valid])
+    try:
+        if manager.valid:
+            await query.answer("✅ Валид")
+        else:
+            await query.answer("❌ Не валид")
+    except TelegramBadRequest:
+        pass
+
     try:
         await query.message.edit_text(
             text_session(manager),

@@ -6,7 +6,7 @@ from aiogram import Router
 from aiogram.filters import ExceptionTypeFilter
 from aiogram.types.error_event import ErrorEvent
 
-from bot.core.session.exceptions import TFileError, ValidationError
+from bot.core.session.exceptions import ClientNotFoundError, TFileError, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,11 @@ async def error_zip_handler(error: ErrorEvent):
 @router.errors(ExceptionTypeFilter(TFileError))
 async def error_key_datahandler(error: ErrorEvent):
     await update_answer(error, "❌ Не удалось открыть key_data")
+
+
+@router.errors(ExceptionTypeFilter(ClientNotFoundError))
+async def error_client_not_foundhandler(error: ErrorEvent):
+    await update_answer(error, "❌ Всемя жизни клиента вышло. Попробуйте еще раз")
 
 
 @router.errors()

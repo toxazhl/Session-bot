@@ -2,13 +2,9 @@ import base64
 import ipaddress
 import struct
 from pathlib import Path
-from typing import Type
 
 import aiosqlite
-from opentele.api import APIData
 from pyrogram.session.internals.data_center import DataCenter
-from telethon import TelegramClient
-from telethon.sessions import StringSession
 
 from bot.core.session.exceptions import ValidationError
 
@@ -136,22 +132,22 @@ class TeleSession:
     def decode(x: str) -> bytes:
         return base64.urlsafe_b64decode(x)
 
-    def client(
-        self, api: Type[APIData], proxy: None | dict = None, no_updates: bool = True
-    ):
-        client = TelegramClient(
-            session=StringSession(self.to_string()),
-            api_id=api.api_id,
-            api_hash=api.api_hash,
-            proxy=proxy,
-            device_model=api.device_model,
-            system_version=api.system_version,
-            app_version=api.app_version,
-            lang_code=api.lang_code,
-            system_lang_code=api.system_lang_code,
-            receive_updates=not no_updates,
-        )
-        return client
+    # def client(
+    #     self, api: Type[APIData], proxy: None | dict = None, no_updates: bool = True
+    # ):
+    #     client = TelegramClient(
+    #         session=StringSession(self.to_string()),
+    #         api_id=api.api_id,
+    #         api_hash=api.api_hash,
+    #         proxy=proxy,
+    #         device_model=api.device_model,
+    #         system_version=api.system_version,
+    #         app_version=api.app_version,
+    #         lang_code=api.lang_code,
+    #         system_lang_code=api.system_lang_code,
+    #         receive_updates=not no_updates,
+    #     )
+    #     return client
 
     def to_string(self) -> str:
         if self.server_address is None:

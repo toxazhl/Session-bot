@@ -8,3 +8,11 @@ class TFileError(Exception):
 
 class ClientNotFoundError(Exception):
     pass
+
+
+class ClientManagerNotInitialized(Exception):
+    pass
+
+
+class UserIdNoneError(Exception):
+    pass

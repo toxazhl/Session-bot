@@ -16,3 +16,4 @@ pyrogram
 telethon
 aiosqlite
 apscheduler
+typing_extensions

@@ -76,18 +76,19 @@ async def to_tele_str_handler(
 async def to_tdata_zip_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
-    try:
-        manager = await SessionManager.from_database(callback_data.session_id, repo)
-        with FileManager(suffix=".zip") as fm:
-            await manager.to_tdata_zip(fm.path)
-            await query.message.answer_document(
-                FSInputFile(fm.path, filename=f"tdata-{manager.name}{fm.path.suffix}")
-            )
-
-        await query.answer()
-
-    except TypeError:
+    manager = await SessionManager.from_database(callback_data.session_id, repo)
+    if manager.user_id is None:
         await query.answer(
-            "❌ Для конвертации в tdata сессия должна быть валидной или должен присутствовать user_id",
+            "Невозможно сконвертировать сессию из-за отсутствия user_id\n"
+            'Нажмите на "🔎 Validate" что-бы обновить user_id сессии',
             show_alert=True,
         )
+        return
+
+    with FileManager(suffix=".zip") as fm:
+        manager.to_tdata_zip(fm.path)
+        await query.message.answer_document(
+            FSInputFile(fm.path, filename=f"tdata-{manager.name}{fm.path.suffix}")
+        )
+
+    await query.answer()

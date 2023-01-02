@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from bot.core.config.configreader import Config
-from bot.core.session.auth import AuthManager
+from bot.core.session.client import ClientManager
 from bot.core.session.proxy import ProxyManager
 from bot.handlers import setup_routers
 from bot.middlewares.db import DbSessionMiddleware
@@ -48,15 +48,15 @@ async def main():
     dp = Dispatcher(storage=storage)
 
     proxy_manager = ProxyManager(db_pool)
-    auth_manager = AuthManager(proxy_manager=proxy_manager, timeout=600)
+    client_manager = ClientManager(proxy_manager=proxy_manager)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(proxy_manager.update, "interval", seconds=60)
-    scheduler.add_job(auth_manager.timeout_close, "interval", seconds=60)
+    scheduler.add_job(client_manager.terminate_timeout, "interval", seconds=5)
     scheduler.start()
 
     dp["proxy_manager"] = proxy_manager
-    dp["auth_manager"] = auth_manager
+    dp["client_manager"] = client_manager
 
     dp.message.filter(F.chat.type == "private")
     dp.update.outer_middleware(DbSessionMiddleware(db_pool))

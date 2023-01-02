@@ -9,7 +9,7 @@ from pyrogram.errors import BadRequest, SessionPasswordNeeded
 
 from bot import keyboards as kb
 from bot.core.db.repo import Repo
-from bot.core.session.auth import AuthManager
+from bot.core.session.client import ClientManager
 from bot.core.session.enums import SessionSource
 from bot.core.session.session import SessionManager
 from bot.misc.states import LoginStates
@@ -59,16 +59,26 @@ async def phone_cancel_handler(query: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "phone_confirm", LoginStates.phone_confirm)
 async def phone_confirm_handler(
-    query: CallbackQuery, state: FSMContext, auth_manager: AuthManager
+    query: CallbackQuery, state: FSMContext, client_manager: ClientManager
 ):
     data = await state.get_data()
     api = API.TelegramDesktop.Generate(system="windows")
-    client = await auth_manager.create(
-        user_id=query.from_user.id, api=api, phone_number=data["phone_number"]
+    client = client_manager.new(
+        api_id=api.api_id,
+        api_hash=api.api_hash,
+        app_version=api.app_version,
+        device_model=api.device_model,
+        system_version=api.system_version,
+        lang_code=api.lang_code,
+        name=query.from_user.id,
+        phone_number=data["phone_number"],
+        timeout=600,
     )
 
+    await client.connect()
+
     try:
-        sent_code = await client.send_code(phone_number=client.phone_number)
+        sent_code = await client.send_code()
 
     except BadRequest as e:
         await query.message.edit_text(f"❌ Ошибка:\n<b>{e.MESSAGE}</b>")
@@ -84,7 +94,6 @@ async def phone_confirm_handler(
         }
 
         await state.set_state(LoginStates.phone_code)
-        await state.update_data(phone_code_hash=sent_code.phone_code_hash)
         await query.message.edit_text(
             f"Код подтверждения отправлен через {sent_code_descriptions[sent_code.type]}\n"
             "🔑 Введите код:",
@@ -94,15 +103,12 @@ async def phone_confirm_handler(
 
 @router.message(F.text, LoginStates.phone_code)
 async def phone_code_handler(
-    message: Message, state: FSMContext, repo: Repo, auth_manager: AuthManager
+    message: Message, state: FSMContext, repo: Repo, client_manager: ClientManager
 ):
-    data = await state.get_data()
-    client = auth_manager.get(message.from_user.id)
+    client = client_manager.get(message.from_user.id)
 
     try:
-        signed_in = await client.sign_in(
-            client.phone_number, data["phone_code_hash"], message.text
-        )
+        signed_in = await client.sign_in(message.text)
 
     except BadRequest as e:
         await message.answer(
@@ -128,7 +134,7 @@ async def phone_code_handler(
             source=SessionSource.LOGIN_PHONE,
         )
         session = await repo.session.add_from_manager(message.from_user.id, manager)
-        await auth_manager.close(message.from_user.id)
+        await client_manager.terminate(message.from_user.id)
 
         await message.answer(
             text=text_session(manager), reply_markup=kb.sessions.action(session.id)
@@ -137,9 +143,9 @@ async def phone_code_handler(
 
 @router.message(LoginStates.password)
 async def upload_session_handler(
-    message: Message, state: FSMContext, repo: Repo, auth_manager: AuthManager
+    message: Message, state: FSMContext, repo: Repo, client_manager: ClientManager
 ):
-    client = auth_manager.get(message.from_user.id)
+    client = client_manager.get(message.from_user.id)
 
     try:
         signed_in = await client.check_password(message.text)
@@ -163,7 +169,7 @@ async def upload_session_handler(
             phone=client.me.phone_number,
         )
         session = await repo.session.add_from_manager(message.from_user.id, manager)
-        await auth_manager.close(message.from_user.id)
+        await client_manager.terminate(message.from_user.id)
 
         await message.answer(
             text_session(manager), reply_markup=kb.sessions.action(session.id)

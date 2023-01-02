@@ -1,12 +1,8 @@
 import base64
-import secrets
 import struct
 from pathlib import Path
-from typing import Type
 
 import aiosqlite
-from opentele.api import APIData
-from pyrogram.client import Client
 
 from bot.core.session.exceptions import ValidationError
 
@@ -156,23 +152,23 @@ class PyroSession:
 
         return True
 
-    def client(
-        self, api: Type[APIData], proxy: None | dict = None, no_updates: bool = True
-    ) -> Client:
-        client = Client(
-            name=secrets.token_urlsafe(8),
-            api_id=api.api_id,
-            api_hash=api.api_hash,
-            app_version=api.app_version,
-            device_model=api.device_model,
-            system_version=api.system_version,
-            lang_code=api.lang_code,
-            proxy=proxy,
-            session_string=self.to_string(),
-            no_updates=no_updates,
-            test_mode=self.test_mode,
-        )
-        return client
+    # def client(
+    #     self, api: Type[APIData], proxy: None | dict = None, no_updates: bool = True
+    # ) -> Client:
+    #     client = Client(
+    #         name=secrets.token_urlsafe(8),
+    #         api_id=api.api_id,
+    #         api_hash=api.api_hash,
+    #         app_version=api.app_version,
+    #         device_model=api.device_model,
+    #         system_version=api.system_version,
+    #         lang_code=api.lang_code,
+    #         proxy=proxy,
+    #         session_string=self.to_string(),
+    #         no_updates=no_updates,
+    #         test_mode=self.test_mode,
+    #     )
+    #     return client
 
     def to_string(self) -> str:
         packed = struct.pack(

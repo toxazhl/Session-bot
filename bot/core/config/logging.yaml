@@ -42,4 +42,7 @@ loggers:
   
   aiosqlite:
     level: WARNING
+  
+  apscheduler:
+    level: WARNING
 

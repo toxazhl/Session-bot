@@ -17,12 +17,12 @@ class TDataSession:
         dc_id: int,
         auth_key: bytes,
         user_id: int,
-        api: Type[APIData] = API.TelegramDesktop,
+        # api: Type[APIData] = API.TelegramDesktop,
     ):
         self.dc_id = dc_id
         self.auth_key = auth_key
         self.user_id = user_id
-        self.api = api
+        # self.api = api
 
     @classmethod
     def from_tdata(cls, tdata_folder: Path):
@@ -48,7 +48,8 @@ class TDataSession:
 
         client = TDesktop()
         client._TDesktop__generateLocalKey()
-        account = Account(owner=client, api=self.api)
+        # account = Account(owner=client, api=self.api)
+        account = Account(owner=client)
         account._setMtpAuthorizationCustom(dc_id, self.user_id, [authKey])
         client._addSingleAccount(account)
 
