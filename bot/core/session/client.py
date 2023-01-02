@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from secrets import token_urlsafe
@@ -115,10 +116,16 @@ class ClientManager:
             pass
 
     async def terminate_timeout(self) -> None:
-        for name, client in self.clients.copy().items():
-            if client.create_date + timedelta(seconds=client.timeout) > datetime.now():
-                logger.debug(f"Terminate client {name}")
-                try:
-                    await self.terminate(name)
-                except KeyError:
-                    pass
+        timeout_clients = [
+            self.terminate(name)
+            for name, client in self.clients.items()
+            if client.create_date + timedelta(seconds=client.timeout) > datetime.now()
+        ]
+
+        await asyncio.gather(*timeout_clients)
+
+        # logger.debug(f"Terminate client {name}")
+        # try:
+        #     await self.terminate(name)
+        # except KeyError:
+        #     pass
