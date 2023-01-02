@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from aiogram import F, Router
@@ -16,7 +15,6 @@ from opentele.api import API
 from bot import keyboards as kb
 from bot.core.db.repo import Repo
 from bot.core.session.client import ClientManager
-from bot.core.session.proxy import ProxyManager
 from bot.core.session.session import SessionManager
 from bot.misc.cd_data import SessionCb
 from bot.utils.gen_text import text_session
