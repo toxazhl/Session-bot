@@ -111,6 +111,7 @@ class ClientManager:
     async def terminate(self, name: str | int) -> None:
         client = self.clients.pop(str(name))
         try:
+            logger.debug(f"Terminate client {name}")
             await client.stop()
         except ConnectionError:
             pass
@@ -123,9 +124,3 @@ class ClientManager:
         ]
 
         await asyncio.gather(*timeout_clients)
-
-        # logger.debug(f"Terminate client {name}")
-        # try:
-        #     await self.terminate(name)
-        # except KeyError:
-        #     pass
