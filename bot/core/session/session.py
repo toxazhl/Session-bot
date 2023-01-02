@@ -84,26 +84,17 @@ class SessionManager:
         return token_urlsafe(4)
 
     @classmethod
-    async def autoimport(cls, file: Path, filename: None | str = None) -> None | Self:
-        if await PyroSession.validate(file):
-            return await cls.from_pyrogram_file(file, filename)
-        if await TeleSession.validate(file):
-            return await cls.from_telethon_file(file, filename)
-
+    def autoimport_string(cls, string: str) -> None | Self:
         try:
-            with FileManager() as fm:
-                with zipfile.ZipFile(file) as f:
-                    f.extractall(fm.path)
-
-                if fm.path.joinpath("tdata").exists():
-                    tdata_path = fm.path.joinpath("tdata")
-                else:
-                    tdata_path = fm.path
-
-                return SessionManager.from_tdata_folder(tdata_path)
-
+            return cls.from_pyrogram_string(string)
         except Exception:
-            return None
+            pass
+        try:
+            return cls.from_telethon_string(string)
+        except Exception:
+            pass
+
+        return None
 
     @classmethod
     async def from_database(cls, session_id: UUID, repo: Repo):

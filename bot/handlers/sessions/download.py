@@ -20,7 +20,6 @@ async def to_pyro_sql_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
     manager = await SessionManager.from_database(callback_data.session_id, repo)
-    manager.filename
     with FileManager(suffix=".session") as fm:
         await manager.to_pyrogram_file(fm.path)
         await query.message.answer_document(
@@ -35,10 +34,8 @@ async def to_pyro_str_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
     manager = await SessionManager.from_database(callback_data.session_id, repo)
-
-    string_session = manager.to_pyrogram_string()
     await query.message.edit_text(
-        hcode(string_session),
+        hcode(manager.to_pyrogram_string()),
         reply_markup=kb.sessions.back_to_session(callback_data.session_id),
     )
     await query.answer()
@@ -63,10 +60,8 @@ async def to_tele_str_handler(
     query: CallbackQuery, callback_data: SessionCb, repo: Repo
 ):
     manager = await SessionManager.from_database(callback_data.session_id, repo)
-
-    string_session = manager.to_telethon_string()
     await query.message.edit_text(
-        hcode(string_session),
+        hcode(manager.to_telethon_string()),
         reply_markup=kb.sessions.back_to_session(callback_data.session_id),
     )
     await query.answer()

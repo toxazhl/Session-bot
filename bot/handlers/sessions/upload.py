@@ -20,7 +20,8 @@ router = Router()
 
 
 @router.message(F.text == "⬆️ Загрузить")
-async def upload_session_handler(message: Message):
+async def upload_session_handler(message: Message, state: FSMContext):
+    await state.set_state(UploadStates.upload)
     await message.answer(
         "Отправь файл или строку сессии в любом формате",
         reply_markup=kb.sessions.upload(),
@@ -44,20 +45,29 @@ async def upload_file_too_big_handler(message: Message):
     )
 
 
+@router.message(F.text, UploadStates.upload)
+async def auto_string_handler(message: Message, state: FSMContext, repo: Repo):
+    manager = SessionManager.autoimport_string(message.text)
+    await post_autoimport(manager, message, state, repo)
+
+
 @router.message(F.document)
-async def auto_handler(
-    message: Message, state: FSMContext, user: User, repo: Repo, bot: Bot
-):
+async def auto_handler(message: Message, state: FSMContext, repo: Repo, bot: Bot):
     with FileManager() as fm:
         await bot.download(message.document, fm.path)
         manager = await SessionManager.autoimport(fm.path)
+    await post_autoimport(manager, message, state, repo)
 
+
+async def post_autoimport(
+    manager: SessionManager, message: Message, state: FSMContext, repo: Repo
+):
     if not manager:
         await message.reply("❌ Не удалось определить тип сессии")
         return None
 
     await state.clear()
-    session = await repo.session.add_from_manager(user.id, manager)
+    session = await repo.session.add_from_manager(message.from_user.id, manager)
     await message.answer(
         text_session(manager), reply_markup=kb.sessions.action(session.id)
     )
@@ -86,38 +96,26 @@ async def manual_dc_id_handler(message: Message, state: FSMContext):
 async def manual_user_id_handler(
     message: Message, state: FSMContext, repo: Repo, user: User
 ):
-    user_id = int(message.text)
-
     data = await state.get_data()
-    manager = SessionManager(
-        auth_key=bytes.fromhex(data["auth_key"]),
-        dc_id=data["dc_id"],
-        user_id=user_id,
-        source=SessionSource.MANUAL,
-    )
-
-    session = await repo.session.add_from_manager(user.id, manager)
-
-    await state.clear()
-    await message.answer(
-        text_session(manager), reply_markup=kb.sessions.action(session.id)
-    )
+    data["user_id"] = int(message.text)
+    await post_manual(data, message, state, repo)
 
 
 @router.callback_query(F.data == "skip", UploadStates.manual_user_id)
-async def skip_user_id_handler(
-    query: CallbackQuery, state: FSMContext, repo: Repo, user: User
-):
+async def skip_user_id_handler(query: CallbackQuery, state: FSMContext, repo: Repo):
     data = await state.get_data()
+    await post_manual(data, query.message, state, repo)
+
+
+async def post_manual(data: dict, message: Message, state: FSMContext, repo: Repo):
     manager = SessionManager(
         auth_key=bytes.fromhex(data["auth_key"]),
         dc_id=data["dc_id"],
+        user_id=data.get("user_id"),
         source=SessionSource.MANUAL,
     )
-
     session = await repo.session.add_from_manager(user.id, manager)
-
     await state.clear()
-    await query.message.edit_text(
+    await message.answer(
         text_session(manager), reply_markup=kb.sessions.action(session.id)
     )
