@@ -77,7 +77,7 @@ class SessionRepo(BaseRepo):
 
     async def get(self, id: UUID) -> Session:
         stmt = select(Session).where(Session.id == id)
-        return await self._scalar(stmt)
+        return await self._scalar_one(stmt)
 
     async def search(
         self, user_id: int, offset: int = 0, limit: int = 50, query: None | str = None

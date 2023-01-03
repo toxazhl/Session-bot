@@ -98,6 +98,7 @@ class ClientManager:
         )
 
         self.clients[str(name)] = client
+        logger.debug(f"Create client {name}")
 
         return client
 
@@ -108,13 +109,17 @@ class ClientManager:
 
         return client
 
-    async def terminate(self, name: str | int) -> None:
-        client = self.clients.pop(str(name))
-        try:
-            logger.debug(f"Terminate client {name}")
-            await client.stop()
-        except ConnectionError:
-            pass
+    async def terminate(self, name: str) -> None:
+        client = self.clients[name]
+        del self.clients[name]
+        # try:
+        logger.debug(f"Terminating client {name}")
+        await client.terminate()
+        # await client.disconnect()
+        await client.session.stop()
+        await client.storage.close()
+        # except ConnectionError:
+        #     pass
 
     async def terminate_timeout(self) -> None:
         timeout_clients = [

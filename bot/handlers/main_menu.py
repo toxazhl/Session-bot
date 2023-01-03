@@ -1,6 +1,7 @@
 import logging
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -37,4 +38,7 @@ async def start_handler(message: Message, state: FSMContext):
 @router.callback_query(F.data == "close")
 async def upload_pyrogram_handler(query: CallbackQuery, state: FSMContext):
     await state.clear()
-    await query.message.delete()
+    try:
+        await query.message.delete()
+    except TelegramBadRequest:
+        pass

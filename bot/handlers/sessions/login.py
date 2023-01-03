@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from opentele.api import API
 from pyrogram import enums
-from pyrogram.errors import BadRequest, SessionPasswordNeeded
+from pyrogram.errors import BadRequest, RPCError, SessionPasswordNeeded
 
 from bot import keyboards as kb
 from bot.core.db.repo import Repo
@@ -81,7 +81,7 @@ async def phone_confirm_handler(
     try:
         sent_code = await client.send_code()
 
-    except BadRequest as e:
+    except RPCError as e:
         await query.message.edit_text(f"❌ Ошибка:\n<b>{e.MESSAGE}</b>")
         await state.clear()
 

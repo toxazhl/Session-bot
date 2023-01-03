@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from bot.core.db.models import Proxy
 from bot.core.db.repo import Repo
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class ProxyManager:
@@ -18,7 +18,7 @@ class ProxyManager:
     async def update(self):
         async with self.db_pool() as session:
             self.proxies = await Repo(session).proxy.get_all()
-            logger.debug(f"Updated {len(self.proxies)} proxies")
+            # logger.debug(f"Updated {len(self.proxies)} proxies")
 
     def get(self) -> None | Proxy:
         if self.proxies:
