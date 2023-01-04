@@ -31,3 +31,8 @@ class ProxyManager:
         proxy = self.get()
         if proxy:
             return proxy.pyro_format()
+
+    def get_telethon(self) -> None | tuple:
+        proxy = self.get()
+        if proxy:
+            return proxy.telethon_format()

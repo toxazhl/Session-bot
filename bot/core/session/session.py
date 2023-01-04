@@ -5,21 +5,18 @@ from typing import Type
 from uuid import UUID
 
 from opentele.api import APIData
-from pyrogram.errors.rpc_error import RPCError
 from typing_extensions import Self
 
 from bot.core.db.models import Session
 from bot.core.db.repo import Repo
 
-from .client import Client, ClientManager
+from .client import ClientManager
 from .enums import SessionSource
-from .exceptions import ClientManagerNotInitialized, UserIdNoneError
+from .exceptions import UserIdNoneError
 from .files import FileManager
 from .kinds.pyro import PyroSession
 from .kinds.tdata import TDataSession
 from .kinds.tele import TeleSession
-
-# api: Type[APIData] | APIData
 
 
 class SessionManager:
@@ -49,21 +46,6 @@ class SessionManager:
         self.source = source
         self.client_manager = client_manager
         self.user = None
-
-    def client(self, api: Type[APIData] | APIData, no_updates: None | bool = None):
-        if self.client_manager is None:
-            raise ClientManagerNotInitialized
-
-        return self.client_manager.new(
-            api_id=api.api_id,
-            api_hash=api.api_hash,
-            app_version=api.app_version,
-            device_model=api.device_model,
-            system_version=api.system_version,
-            lang_code=api.lang_code,
-            session_string=self.pyrogram.to_string(),
-            no_updates=no_updates,
-        )
 
     @property
     def auth_key_hex(self) -> str:
@@ -229,55 +211,38 @@ class SessionManager:
         return TDataSession(
             dc_id=self.dc_id,
             auth_key=self.auth_key,
-            # api=self.api,
             user_id=self.user_id,
         )
-
-    # def pyrogram_client(self, proxy=None, no_updates=True):
-    #     if self.proxy and not proxy:
-    #         proxy = self.proxy.pyro_format()
-
-    #     client = self.pyrogram.client(
-    #         api=self.api,
-    #         proxy=proxy,
-    #         no_updates=no_updates,
-    #     )
-    #     return client
-
-    # def telethon_client(self, proxy=None, no_updates=True):
-    #     client = self.telethon.client(
-    #         api=self.api,
-    #         proxy=proxy or self.proxy,
-    #         no_updates=no_updates,
-    #     )
-    #     return client
 
     async def validate(
         self, client_manager: ClientManager, api: Type[APIData] | APIData
     ) -> bool:
-        try:
-            async with client_manager.new(
-                api_id=api.api_id,
-                api_hash=api.api_hash,
-                app_version=api.app_version,
-                device_model=api.device_model,
-                system_version=api.system_version,
-                lang_code=api.lang_code,
-                session_string=self.to_pyrogram_string(),
-                timeout=20,
-            ) as client:
-                user = await client.get_me()
+        async with client_manager.new(
+            api_id=api.api_id,
+            api_hash=api.api_hash,
+            app_version=api.app_version,
+            device_model=api.device_model,
+            system_version=api.system_version,
+            lang_code=api.lang_code,
+            system_lang_code=api.system_lang_code,
+            client_timeout=20,
+            session=self.telethon.to_string(),
+            timeout=10,
+            request_retries=0,
+            connection_retries=0,
+        ) as client:
+            user = await client.get_me()
 
-        except RPCError:
-            self.valid = False
-
-        else:
+        if user:
             self.valid = True
             self.user = user
             self.user_id = user.id
             self.first_name = user.first_name
             self.last_name = user.last_name
             self.username = user.username
-            self.phone = user.phone_number
+            self.phone = user.phone
+
+        else:
+            self.valid = False
 
         return self.valid

@@ -15,7 +15,7 @@ def search():
 def auth_type():
     builder = InlineKeyboardBuilder()
     builder.button(text="☎️ Телефон", callback_data="login_phone")
-    # builder.button(text="📱 QR-код", callback_data="login_qr")
+    builder.button(text="📱 QR-код", callback_data="login_qr")
     builder.button(text="❌ Закрыть", callback_data="close")
     builder.adjust(2)
 

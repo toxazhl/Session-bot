@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery, Message
 
 from bot import keyboards as kb
 from bot.core.db.repo import Repo
+from bot.core.session.client import ClientManager
 from bot.filters.user import NewUserFilter
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ async def start_handler(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data == "close")
-async def upload_pyrogram_handler(query: CallbackQuery, state: FSMContext):
+async def close_handler(query: CallbackQuery, state: FSMContext):
     await state.clear()
     try:
         await query.message.delete()

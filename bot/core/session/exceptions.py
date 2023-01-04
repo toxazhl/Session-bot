@@ -10,6 +10,10 @@ class ClientNotFoundError(Exception):
     pass
 
 
+class ClientAlredyExistError(Exception):
+    pass
+
+
 class ClientManagerNotInitialized(Exception):
     pass
 

@@ -2,26 +2,36 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from secrets import token_urlsafe
+from typing import Type
 
-from pyrogram.client import Client as PyroClient
+from telethon import TelegramClient
+from telethon.network import Connection, ConnectionTcpFull
+from telethon.sessions import StringSession
 
-from bot.core.session.exceptions import ClientNotFoundError
+from bot.core.session.exceptions import ClientAlredyExistError, ClientNotFoundError
 from bot.core.session.proxy import ProxyManager
 
 logger = logging.getLogger(__name__)
 
 
-class Client(PyroClient):
-    def __init__(self, client_manager: "ClientManager", timeout: int, *args, **kwargs):
+class Client(TelegramClient):
+    def __init__(
+        self,
+        name: str | int,
+        client_manager: "ClientManager",
+        client_timeout: int,
+        *args,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
-        self.timeout = timeout
+        self.name = name
+        self.client_timeout = client_timeout
         self.client_manager = client_manager
         self.create_date = datetime.now()
-        self.phone_code_hash = None
+        self.phone = None
 
     async def __aenter__(self):
-        await self.start()
-        return self
+        return await self.start()
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
@@ -29,103 +39,113 @@ class Client(PyroClient):
         except KeyError:
             pass
 
-    async def send_code(self, phone_number: None | str = None):
-        if phone_number:
-            self.phone_number = phone_number
+    async def send_code(self, phone: str):
+        self.phone = phone
 
-        if self.phone_number is None:
-            raise ValueError("phone_number is None")
+        return await self.send_code_request(self.phone)
 
-        sent_code = await super().send_code(self.phone_number)
-        self.phone_code_hash = sent_code.phone_code_hash
-        return sent_code
-
-    async def sign_in(self, phone_code: str):
-        if self.phone_code_hash is None:
-            raise ValueError("phone_code_hash is None")
-
-        if self.phone_number is None:
-            raise ValueError("phone_number is None")
-
-        return await super().sign_in(
-            self.phone_number, self.phone_code_hash, phone_code
-        )
+    async def sign_in(self, phone_code: None | str = None, password: None | str = None):
+        return await super().sign_in(self.phone, code=phone_code, password=password)
 
 
 class ClientManager:
     def __init__(self, proxy_manager: ProxyManager) -> None:
         self.proxy_manager = proxy_manager
-        self.clients: dict[str, Client] = {}
+        self.clients: dict[str | int, Client] = {}
 
     def new(
         self,
-        api_id: int | str,
+        api_id: int,
         api_hash: str,
-        app_version: str = PyroClient.APP_VERSION,
-        device_model: str = PyroClient.DEVICE_MODEL,
-        system_version: str = PyroClient.SYSTEM_VERSION,
-        lang_code: str = PyroClient.LANG_CODE,
-        proxy: None | dict = None,
-        session_string: None | str = None,
-        phone_number: None | str = None,
-        no_updates: None | bool = None,
-        takeout: None | bool = None,
+        *,
+        device_model: str,
+        system_version: str,
+        app_version: str,
+        lang_code: str,
+        system_lang_code: str,
         name: None | str | int = None,
-        timeout: int = 600,
+        client_timeout: int = 600,
+        session: None | str = None,
+        proxy: None | tuple | dict = None,
+        timeout: int = 10,
+        request_retries: int = 5,
+        connection_retries: int = 5,
+        retry_delay: int = 1,
+        flood_sleep_threshold: int = 60,
+        auto_reconnect: bool = False,
+        connection: Type[Connection] = ConnectionTcpFull,
+        use_ipv6: bool = False,
+        local_addr: None | str | tuple = None,
+        sequential_updates: bool = False,
+        raise_last_call_error: bool = False,
+        receive_updates: bool = True,
+        catch_up: bool = False,
     ) -> Client:
         if name is None:
             name = token_urlsafe(8)
 
         if proxy is None:
-            proxy = self.proxy_manager.get_pyro()
+            proxy = self.proxy_manager.get_telethon()
+
+        if isinstance(session, str):
+            session = StringSession(session)
+
+        if self.clients.get(name):
+            raise ClientAlredyExistError()
+
+        logger.debug(f"Creating client {name}")
 
         client = Client(
+            name=name,
             client_manager=self,
-            timeout=timeout,
-            name=str(name),
+            client_timeout=client_timeout,
+            session=session,
             api_id=api_id,
             api_hash=api_hash,
-            app_version=app_version,
+            connection=connection,
+            use_ipv6=use_ipv6,
+            proxy=proxy,
+            local_addr=local_addr,
+            timeout=timeout,
+            request_retries=request_retries,
+            connection_retries=connection_retries,
+            retry_delay=retry_delay,
+            auto_reconnect=auto_reconnect,
+            sequential_updates=sequential_updates,
+            flood_sleep_threshold=flood_sleep_threshold,
+            raise_last_call_error=raise_last_call_error,
             device_model=device_model,
             system_version=system_version,
+            app_version=app_version,
             lang_code=lang_code,
-            proxy=proxy,
-            session_string=session_string,
-            in_memory=True,
-            phone_number=phone_number,
-            no_updates=no_updates,
-            takeout=takeout,
+            system_lang_code=system_lang_code,
+            base_logger=None,
+            receive_updates=receive_updates,
+            catch_up=catch_up,
         )
-
-        self.clients[str(name)] = client
-        logger.debug(f"Create client {name}")
+        self.clients[name] = client
 
         return client
 
     def get(self, name: str | int) -> Client:
-        client = self.clients.get(str(name))
+        client = self.clients.get(name)
         if not client:
             raise ClientNotFoundError
 
         return client
 
-    async def terminate(self, name: str) -> None:
+    async def terminate(self, name: str | int, timeout: bool = False) -> None:
         client = self.clients[name]
+        logger.debug(f"Terminating client={name}, timeout={timeout}")
         del self.clients[name]
-        # try:
-        logger.debug(f"Terminating client {name}")
-        await client.terminate()
-        # await client.disconnect()
-        await client.session.stop()
-        await client.storage.close()
-        # except ConnectionError:
-        #     pass
+        await client.disconnect()
 
     async def terminate_timeout(self) -> None:
         timeout_clients = [
-            self.terminate(name)
+            self.terminate(name, timeout=True)
             for name, client in self.clients.items()
-            if client.create_date + timedelta(seconds=client.timeout) > datetime.now()
+            if client.create_date + timedelta(seconds=client.client_timeout)
+            < datetime.now()
         ]
 
         await asyncio.gather(*timeout_clients)

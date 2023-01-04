@@ -1,15 +1,25 @@
+import asyncio
+import io
 import logging
 
+import qrcode
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from opentele.api import API
-from pyrogram import enums
-from pyrogram.errors import BadRequest, RPCError, SessionPasswordNeeded
+from telethon.custom import QRLogin
+from telethon.errors import SessionPasswordNeededError
+from telethon.tl.types.auth import (
+    SentCodeTypeApp,
+    SentCodeTypeCall,
+    SentCodeTypeFlashCall,
+    SentCodeTypeSms,
+)
+from telethon.types import User
 
 from bot import keyboards as kb
 from bot.core.db.repo import Repo
-from bot.core.session.client import ClientManager
+from bot.core.session.client import Client, ClientManager
 from bot.core.session.enums import SessionSource
 from bot.core.session.session import SessionManager
 from bot.misc.states import LoginStates
@@ -28,6 +38,72 @@ async def login_handler(message: Message, state: FSMContext):
         "Выбери тип авторизации\n(Скоро будет доступен вход по QR)",
         reply_markup=kb.sessions.auth_type(),
     )
+
+
+@router.callback_query(F.data == "login_qr")
+async def login_qr_handler(
+    query: CallbackQuery,
+    client_manager: ClientManager,
+    state: FSMContext,
+    repo: Repo,
+):
+    try:
+        await client_manager.terminate(query.from_user.id)
+    except KeyError:
+        pass
+
+    api = API.TelegramDesktop.Generate(system="windows")
+    client = client_manager.new(
+        api_id=api.api_id,
+        api_hash=api.api_hash,
+        app_version=api.app_version,
+        device_model=api.device_model,
+        system_version=api.system_version,
+        lang_code=api.lang_code,
+        system_lang_code=api.system_lang_code,
+        name=query.from_user.id,
+        client_timeout=600,
+    )
+
+    await client.connect()
+
+    qr_login = await client.qr_login()
+    stream = io.BytesIO()
+    qr = qrcode.QRCode(version=1, border=1)
+    qr.add_data(qr_login.url)
+    qr.make_image(fill_color="black", back_color="white").save(stream)
+    qr_msg = await query.message.answer_photo(
+        photo=BufferedInputFile(file=stream.getvalue(), filename="qr.png")
+    )
+    await query.message.delete()
+    asyncio.create_task(
+        wait_for_qr_login(query, state, repo, client_manager, client, qr_login, qr_msg)
+    )
+
+
+async def wait_for_qr_login(
+    query: CallbackQuery,
+    state: FSMContext,
+    repo: Repo,
+    client_manager: ClientManager,
+    client: Client,
+    qr_login: QRLogin,
+    qr_msg: Message,
+):
+    try:
+        signed_in = await qr_login.wait()
+    except SessionPasswordNeededError:
+        await qr_msg.delete()
+        await state.set_state(LoginStates.password)
+        await query.message.answer(
+            "🔑 Двухэтапная проверка включена, и требуется ввести пароль:",
+            reply_markup=kb.main_menu.close(),
+        )
+    else:
+        await qr_msg.delete()
+        await show_authorized_session(
+            query.message, state, repo, client_manager, client, signed_in
+        )
 
 
 @router.callback_query(F.data == "login_phone")
@@ -62,6 +138,11 @@ async def phone_cancel_handler(query: CallbackQuery, state: FSMContext):
 async def phone_confirm_handler(
     query: CallbackQuery, state: FSMContext, client_manager: ClientManager
 ):
+    try:
+        await client_manager.terminate(query.from_user.id)
+    except KeyError:
+        pass
+
     data = await state.get_data()
     api = API.TelegramDesktop.Generate(system="windows")
     client = client_manager.new(
@@ -71,35 +152,42 @@ async def phone_confirm_handler(
         device_model=api.device_model,
         system_version=api.system_version,
         lang_code=api.lang_code,
+        system_lang_code=api.system_lang_code,
         name=query.from_user.id,
-        phone_number=data["phone_number"],
-        timeout=600,
+        client_timeout=600,
     )
 
     await client.connect()
 
-    try:
-        sent_code = await client.send_code()
+    sent_code = await client.send_code(data["phone_number"])
 
-    except RPCError as e:
-        await query.message.edit_text(f"❌ Ошибка:\n<b>{e.MESSAGE}</b>")
-        await state.clear()
+    sent_code_descriptions = None
 
-    else:
-        sent_code_descriptions = {
-            enums.SentCodeType.APP: "Telegram app",
-            enums.SentCodeType.SMS: "SMS",
-            enums.SentCodeType.CALL: "phone call",
-            enums.SentCodeType.FLASH_CALL: "phone flash call",
-            enums.SentCodeType.FRAGMENT_SMS: "Fragment SMS",
-        }
+    if isinstance(sent_code.type, SentCodeTypeApp):
+        sent_code_descriptions = "Telegram app"
 
-        await state.set_state(LoginStates.phone_code)
-        await query.message.edit_text(
-            f"Код подтверждения отправлен через {sent_code_descriptions[sent_code.type]}\n"
-            "🔑 Введите код:",
-            reply_markup=kb.main_menu.close(),
+    if isinstance(sent_code.type, SentCodeTypeSms):
+        sent_code_descriptions = "SMS"
+
+    if isinstance(sent_code.type, SentCodeTypeCall):
+        sent_code_descriptions = "Phone call"
+
+    if isinstance(sent_code.type, SentCodeTypeFlashCall):
+        sent_code_descriptions = "Phone flash call"
+
+    text = "Код подтверждения отправлен\n🔑 Введите код:"
+
+    if sent_code_descriptions:
+        text = (
+            f"Код подтверждения отправлен через {sent_code_descriptions}\n"
+            "🔑 Введите код:"
         )
+
+    await state.set_state(LoginStates.phone_code)
+    await query.message.edit_text(
+        text,
+        reply_markup=kb.main_menu.close(),
+    )
 
 
 @router.message(F.text, LoginStates.phone_code)
@@ -111,34 +199,16 @@ async def phone_code_handler(
     try:
         signed_in = await client.sign_in(message.text)
 
-    except BadRequest as e:
-        await message.answer(
-            f"❌ Ошибка:\n<b>{e.MESSAGE}</b>\n\nПопробуйте еще раз",
-            reply_markup=kb.main_menu.close(),
-        )
-
-    except SessionPasswordNeeded:
+    except SessionPasswordNeededError:
         await state.set_state(LoginStates.password)
-        hint = await client.get_password_hint()
         await message.answer(
-            f"Подсказка: {hint}\n"
             "🔑 Двухэтапная проверка включена, и требуется ввести пароль:",
             reply_markup=kb.main_menu.close(),
         )
 
     else:
-        await state.clear()
-        manager = SessionManager(
-            dc_id=await client.storage.dc_id(),
-            auth_key=await client.storage.auth_key(),
-            user_id=signed_in.id,
-            source=SessionSource.LOGIN_PHONE,
-        )
-        session = await repo.session.add_from_manager(message.from_user.id, manager)
-        await client_manager.terminate(message.from_user.id)
-
-        await message.answer(
-            text=text_session(manager), reply_markup=kb.sessions.action(session.id)
+        await show_authorized_session(
+            message, state, repo, client_manager, client, signed_in
         )
 
 
@@ -147,31 +217,35 @@ async def upload_session_handler(
     message: Message, state: FSMContext, repo: Repo, client_manager: ClientManager
 ):
     client = client_manager.get(message.from_user.id)
+    signed_in = await client.sign_in(password=message.text)
+    await show_authorized_session(
+        message, state, repo, client_manager, client, signed_in
+    )
 
-    try:
-        signed_in = await client.check_password(message.text)
 
-    except BadRequest as e:
-        await message.answer(
-            f"❌ Ошибка:\n<b>{e.MESSAGE}</b>\n\nПопробуй еще раз",
-            reply_markup=kb.main_menu.close(),
-        )
+async def show_authorized_session(
+    message: Message,
+    state: FSMContext,
+    repo: Repo,
+    client_manager: ClientManager,
+    client: Client,
+    signed_in: User,
+):
+    await state.clear()
+    manager = SessionManager(
+        dc_id=client.session.dc_id,
+        auth_key=client.session.auth_key.key,
+        user_id=signed_in.id,
+        valid=True,
+        first_name=signed_in.first_name,
+        last_name=signed_in.last_name,
+        username=signed_in.username,
+        phone=signed_in.phone,
+        source=SessionSource.LOGIN_PHONE,
+    )
+    session = await repo.session.add_from_manager(message.from_user.id, manager)
 
-    else:
-        await state.clear()
-        manager = SessionManager(
-            dc_id=await client.storage.dc_id(),
-            auth_key=await client.storage.auth_key(),
-            user_id=signed_in.id,
-            valid=True,
-            first_name=client.me.first_name,
-            last_name=client.me.last_name,
-            username=client.me.username,
-            phone=client.me.phone_number,
-        )
-        session = await repo.session.add_from_manager(message.from_user.id, manager)
-        await client_manager.terminate(message.from_user.id)
-
-        await message.answer(
-            text_session(manager), reply_markup=kb.sessions.action(session.id)
-        )
+    await message.answer(
+        text_session(manager), reply_markup=kb.sessions.action(session.id)
+    )
+    await client_manager.terminate(message.from_user.id)

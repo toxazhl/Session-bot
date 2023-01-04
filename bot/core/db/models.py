@@ -1,6 +1,7 @@
 import uuid
 from typing import Any
 
+import socks
 from aiogram.utils.markdown import hlink
 from sqlalchemy import (
     BigInteger,
@@ -80,4 +81,13 @@ class Proxy(Base):
             port=self.port,
             username=self.login,
             password=self.password,
+        )
+
+    def telethon_format(self) -> tuple:
+        return (
+            socks.PROXY_TYPES[self.scheme.upper()],
+            self.host,
+            self.port,
+            self.login,
+            self.password,
         )
