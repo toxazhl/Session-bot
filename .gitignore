@@ -1,6 +1,8 @@
-.env
-.vscode/
 __pycache__/
-
 venv/
 logs/
+.vscode/
+.idea/
+.env
+/docker-compose.yml
+redis/data/

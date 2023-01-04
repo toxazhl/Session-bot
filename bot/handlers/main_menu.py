@@ -8,7 +8,6 @@ from aiogram.types import CallbackQuery, Message
 
 from bot import keyboards as kb
 from bot.core.db.repo import Repo
-from bot.core.session.client import ClientManager
 from bot.filters.user import NewUserFilter
 
 logger = logging.getLogger(__name__)

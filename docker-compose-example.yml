@@ -1,0 +1,24 @@
+version: '3.9'
+services:
+    # You can remove redis section and all its mentions if using "memory" storage
+    redis:
+        image: redis
+        restart: "unless-stopped"
+        volumes:
+            # don't forget to put redis.conf to redis_config directory!
+            - "/opt/telesession/redis/config:/usr/local/etc/redis"
+            - "/opt/telesession/redis/data:/data"
+        command: "redis-server /usr/local/etc/redis/redis.conf"
+    db_migration:
+        build: .
+        restart: "on-failure"
+        env_file: .env
+        command: sh -c "python -m alembic upgrade head"
+    bot:
+        build: .
+        stop_signal: SIGINT
+        restart: "unless-stopped"
+        env_file: .env
+        depends_on:
+            - db_migration
+            - redis
