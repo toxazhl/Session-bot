@@ -67,12 +67,9 @@ class Proxy(Base):
     port = Column(Integer)
     login = Column(String(32))
     password = Column(String(32))
-    uses = Column(Integer, server_default="0")
 
     def __repr__(self) -> str:
-        return (
-            f"Proxy(id={self.id}, host={self.host}, port={self.port} uses={self.uses})"
-        )
+        return f"Proxy(id={self.id}, host={self.host}, port={self.port})"
 
     def pyro_format(self) -> dict[str, Any]:
         return dict(

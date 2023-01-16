@@ -17,7 +17,7 @@ class ProxyManager:
 
     async def update(self):
         async with self.db_pool() as session:
-            self.proxies = await Repo(session).proxy.get_all()
+            self.proxies = await Repo(session).get_all_proxies()
             # logger.debug(f"Updated {len(self.proxies)} proxies")
 
     def get(self) -> None | Proxy:

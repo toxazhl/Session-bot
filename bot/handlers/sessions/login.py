@@ -156,11 +156,9 @@ async def phone_confirm_handler(
         name=query.from_user.id,
         client_timeout=600,
     )
-
     await client.connect()
 
     sent_code = await client.send_code(data["phone_number"])
-
     sent_code_descriptions = None
 
     if isinstance(sent_code.type, SentCodeTypeApp):
@@ -243,7 +241,7 @@ async def show_authorized_session(
         phone=signed_in.phone,
         source=SessionSource.LOGIN_PHONE,
     )
-    session = await repo.session.add_from_manager(message.from_user.id, manager)
+    session = await repo.add_session_from_manager(message.from_user.id, manager)
 
     await message.answer(
         text_session(manager), reply_markup=kb.sessions.action(session.id)

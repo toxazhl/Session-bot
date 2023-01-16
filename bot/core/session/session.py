@@ -102,7 +102,7 @@ class SessionManager:
 
     @classmethod
     async def from_database(cls, session_id: UUID, repo: Repo):
-        session = await repo.session.get(session_id)
+        session = await repo.get_session(session_id)
         return cls.from_session(session)
 
     @classmethod

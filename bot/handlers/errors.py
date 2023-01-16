@@ -3,6 +3,7 @@ from sqlite3 import DatabaseError
 from zipfile import BadZipFile
 
 from aiogram import Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import ExceptionTypeFilter
 from aiogram.types.error_event import ErrorEvent
 from telethon.errors import RPCError
@@ -23,10 +24,16 @@ async def update_answer(
             await error.update.callback_query.message.edit_text(
                 text, reply_markup=reply_markup
             )
-        else:
-            await error.update.callback_query.answer(text)
+            return
 
-    elif error.update.message:
+        else:
+            try:
+                await error.update.callback_query.answer(text)
+                return
+            except TelegramBadRequest:
+                pass
+
+    if error.update.message:
         await error.update.message.answer(text, reply_markup=reply_markup)
 
 
@@ -51,13 +58,24 @@ async def error_zip_handler(error: ErrorEvent):
 
 
 @router.errors(ExceptionTypeFilter(TFileError))
-async def error_key_datahandler(error: ErrorEvent):
+async def error_key_data_handler(error: ErrorEvent):
     await update_answer(error, "❌ Не удалось открыть key_data")
 
 
 @router.errors(ExceptionTypeFilter(ClientNotFoundError))
-async def error_client_not_foundhandler(error: ErrorEvent):
+async def error_client_not_found_handler(error: ErrorEvent):
     await update_answer(error, "❌ Время жизни клиента вышло. Попробуйте еще раз")
+    raise error.exception
+
+
+@router.errors(ExceptionTypeFilter(ConnectionError))
+async def connection_error_handler(error: ErrorEvent):
+    await update_answer(
+        error,
+        "❌ Не удалось подключиться к серверам Telegram.\n"
+        "Возможно используеться плохой прокси",
+        edit_message=True,
+    )
     raise error.exception
 
 

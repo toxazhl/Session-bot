@@ -67,7 +67,7 @@ async def post_autoimport(
         return None
 
     await state.clear()
-    session = await repo.session.add_from_manager(message.from_user.id, manager)
+    session = await repo.add_session_from_manager(message.from_user.id, manager)
     await message.answer(
         text_session(manager), reply_markup=kb.sessions.action(session.id)
     )
@@ -114,7 +114,7 @@ async def post_manual(data: dict, message: Message, state: FSMContext, repo: Rep
         user_id=data.get("user_id"),
         source=SessionSource.MANUAL,
     )
-    session = await repo.session.add_from_manager(user.id, manager)
+    session = await repo.add_session_from_manager(user.id, manager)
     await state.clear()
     await message.answer(
         text_session(manager), reply_markup=kb.sessions.action(session.id)

@@ -20,7 +20,7 @@ class UserMiddleware(BaseMiddleware):
         repo: Repo = data["repo"]
 
         if from_user:
-            user = await repo.user.get(id=from_user.id)
+            user = await repo.get_user(id=from_user.id)
             data["user"] = user
 
         return await handler(event, data)

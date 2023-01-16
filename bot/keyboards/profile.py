@@ -5,7 +5,7 @@ def profile():
     builder = InlineKeyboardBuilder()
 
     builder.button(text="🔍 Мои сессии", switch_inline_query_current_chat="")
-    builder.button(text="💳 Пополнить баланс", callback_data="refill_balance")
+    # builder.button(text="💳 Пополнить баланс", callback_data="refill_balance")
 
     return builder.as_markup()
 

@@ -35,7 +35,7 @@ router = Router()
 
 @router.message(F.via_bot)
 async def session_handler(message: Message, repo: Repo):
-    session = await repo.session.get(message.text)
+    session = await repo.get_session(message.text)
     manager = SessionManager.from_session(session)
 
     await message.answer(
@@ -46,7 +46,7 @@ async def session_handler(message: Message, repo: Repo):
 @router.inline_query()
 async def show_user_links(inline_query: InlineQuery, repo: Repo):
     offset = int(inline_query.offset) if inline_query.offset else 0
-    sessions = await repo.session.search(
+    sessions = await repo.search_session(
         inline_query.from_user.id, offset, query=inline_query.query
     )
     results = []
@@ -98,7 +98,7 @@ async def validate_handler(
     api = API.TelegramDesktop.Generate(system="windows")
     await manager.validate(client_manager, api)
 
-    await repo.session.update(callback_data.session_id, manager)
+    await repo.update_session(callback_data.session_id, manager)
     try:
         await query.answer("✅ Валид" if manager.valid else "❌ Не валид")
     except TelegramBadRequest:

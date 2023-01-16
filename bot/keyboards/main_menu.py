@@ -6,7 +6,6 @@ def menu():
 
     builder.button(text="🆕 Войти")
     builder.button(text="⬆️ Загрузить")
-    # builder.button(text="📝 История")
     builder.button(text="👤 Профиль")
 
     builder.adjust(2, 1)

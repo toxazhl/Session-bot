@@ -17,7 +17,7 @@ router = Router()
 
 @router.message(NewUserFilter())
 async def new_user_handler(message: Message, state: FSMContext, repo: Repo):
-    await repo.user.add(id=message.from_user.id)
+    await repo.add_user(id=message.from_user.id)
     await start_handler(message, state)
 
 

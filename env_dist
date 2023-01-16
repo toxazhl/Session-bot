@@ -8,11 +8,12 @@ BOT__USE_REDIS=false
 ## Redis connection string. Required if BOT_FSM_STORAGE=redis
 REDIS_DSN=redis://localhost:6379/0
 ## PostgreSQL connection string. Always required
-POSTGRES_DSN=postgresql+asyncpg://user:pass@localhost/test
+POSTGRES_DSN=postgresql+asyncpg://user:pass@ip:port/db_name
 
 ## Domain part of your webhook.
 WEB__ENABLE_WEBHOOK=false
 WEB__DOMAIN=https://example.com:8443
+## Actual path for your webhook on your domain
 WEB__PATH__BOT=/bot/webhook
 ## App host and port
 WEB__HOST=localhost
