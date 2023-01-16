@@ -1,1 +1,1 @@
-# Aiogram bot template
+# Telegram convert session bot (Telethon, Pyrogram, TData)
